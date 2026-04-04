@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ScaleTransition(
               scale: _animation,
               child: Image.network(
-                'https://i.imgur.com/MvWOIjb.png',
+                'https://i.imgur.com/lwgH7H5.png',
                 width: 200,
                 height: 200,
               ),
