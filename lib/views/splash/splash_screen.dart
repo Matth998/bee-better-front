@@ -28,8 +28,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // 2. Timer para navegar após 2 segundos -- 10 segundo para teste iniciais
-    Timer(const Duration(seconds: 10), () {
+    // 2. Timer para navegar após 3 segundos --
+    Timer(const Duration(seconds: 3), () {
       // Navegar para a nossa tela principal (Login)
       Navigator.pushReplacementNamed(context, '/login');
     });
