@@ -33,7 +33,7 @@ Para quem tem TDAH, a falta de recompensa imediata pode tornar o início e a con
 
 1. **Clone o repositório:**
    ```bash
-   git clone [https://github.com/seu-usuario/bee-better.git](https://github.com/seu-usuario/bee-better.git)
+   git clone [https://github.com/Matth998/bee-better.git](https://github.com/Matth998/bee-better.git)
 2. **Instale as dependências:**
    ```bash
    npm install
