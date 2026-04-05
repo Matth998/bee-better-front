@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 class SplashPosOnboarding extends StatefulWidget {
@@ -20,7 +22,17 @@ class _SplashPosOnboardingState extends State<SplashPosOnboarding>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(); // Faz a animação repetir infinitamente
+
+    // LOGICA DE TRANSIÇÃO:
+    Timer(const Duration(seconds: 4), () {
+      if (mounted) { // Verifica se o usuário não saiu da tela antes do tempo
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    });
+
   }
+
+
 
   @override
   void dispose() {

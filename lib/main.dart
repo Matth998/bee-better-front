@@ -1,4 +1,7 @@
 import 'package:bee_better_flutter/views/auth/login.dart';
+import 'package:bee_better_flutter/views/home/AlarmsScreen.dart';
+import 'package:bee_better_flutter/views/home/CalendarScreen.dart';
+import 'package:bee_better_flutter/views/home/home_screen.dart';
 import 'package:bee_better_flutter/views/onboarding/onboarding_flow.dart';
 import 'package:bee_better_flutter/views/onboarding/registerScreen.dart';
 import 'package:bee_better_flutter/views/splash/splash_onboarding.dart';
@@ -6,7 +9,7 @@ import 'package:bee_better_flutter/views/splash/splash_pos_onboarding.dart';
 import 'package:bee_better_flutter/views/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+void main() async {
   runApp(const MyApp());
 }
 
@@ -25,7 +28,10 @@ class MyApp extends StatelessWidget {
         '/cadastro': (context) => const RegisterScreen(),
         '/pre_onboarding': (context) => const PreOnboardingScreen(),
         '/onboarding': (context) => const OnboardingFlow(),
-        '/pos_onboarding': (context) => const SplashPosOnboarding()
+        '/pos_onboarding': (context) => const SplashPosOnboarding(),
+        '/home': (context) => const HomeScreen(),
+        '/alarms': (context) => const AlarmsScreen(),
+        '/calendar': (context) => const CalendarScreen()
       },
     );
   }
