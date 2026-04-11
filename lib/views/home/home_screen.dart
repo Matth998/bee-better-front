@@ -53,7 +53,8 @@ class HomeScreen extends StatelessWidget {
         onTap: (index) {
           if (index == 0) Navigator.pushNamed(context, '/alarms');
           if (index == 1) Navigator.pushNamed(context, '/calendar');
-          // Rotas futuras
+          if (index == 3) Navigator.pushNamed(context, '/featuresScreen');
+          if (index == 5) Navigator.pushNamed(context, '/menu');
         },
       ),
     );

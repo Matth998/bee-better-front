@@ -27,8 +27,8 @@ class CustomBottomNav extends StatelessWidget {
               _buildNavItem(Icons.access_time, 0),
               _buildNavItem(Icons.calendar_month, 1),
               const SizedBox(width: 40), // Espaço para o botão Home
-              _buildNavItem(Icons.menu, 2),
-              _buildNavItem(Icons.person_outline, 3),
+              _buildNavItem(Icons.menu, 3),
+              _buildNavItem(Icons.person_outline, 5),
             ],
           ),
 

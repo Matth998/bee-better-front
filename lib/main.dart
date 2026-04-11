@@ -1,6 +1,8 @@
 import 'package:bee_better_flutter/views/auth/login.dart';
 import 'package:bee_better_flutter/views/home/AlarmsScreen.dart';
 import 'package:bee_better_flutter/views/home/CalendarScreen.dart';
+import 'package:bee_better_flutter/views/home/FeaturesScreen.dart';
+import 'package:bee_better_flutter/views/home/ProfileProgressScreen.dart';
 import 'package:bee_better_flutter/views/home/home_screen.dart';
 import 'package:bee_better_flutter/views/onboarding/onboarding_flow.dart';
 import 'package:bee_better_flutter/views/onboarding/registerScreen.dart';
@@ -31,7 +33,9 @@ class MyApp extends StatelessWidget {
         '/pos_onboarding': (context) => const SplashPosOnboarding(),
         '/home': (context) => const HomeScreen(),
         '/alarms': (context) => const AlarmsScreen(),
-        '/calendar': (context) => const CalendarScreen()
+        '/calendar': (context) => const CalendarScreen(),
+        '/featuresScreen': (context) => const FeaturesScreen(),
+        '/menu': (context) => ProfileProgressScreen()
       },
     );
   }

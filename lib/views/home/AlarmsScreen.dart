@@ -117,6 +117,8 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         onTap: (index) {
           if (index == 4) Navigator.pushNamed(context, '/home');
           if (index == 1) Navigator.pushNamed(context, '/calendar');
+          if (index == 3) Navigator.pushNamed(context, '/featuresScreen');
+          if (index == 5) Navigator.pushNamed(context, '/menu');
         },
       ),
     );

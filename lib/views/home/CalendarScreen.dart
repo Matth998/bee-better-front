@@ -79,6 +79,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         onTap: (index) {
           if (index == 4) Navigator.pushNamed(context, '/home');
           if (index == 0) Navigator.pushNamed(context, '/alarms');
+          if (index == 3) Navigator.pushNamed(context, '/featuresScreen');
+          if (index == 5) Navigator.pushNamed(context, '/menu');
         },
       ),
     );

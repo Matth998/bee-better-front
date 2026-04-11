@@ -33,15 +33,16 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               const SizedBox(height: 60), // Espaço no topo
-
               // Título "Login"
               const Text(
                 'Login',
                 style: TextStyle(
                   fontSize: 48,
-                  fontWeight: FontWeight.w400, // Colocar a fonte real - Ver com a Julia
+                  fontWeight:
+                      FontWeight.w400, // Colocar a fonte real - Ver com a Julia
                   color: Colors.black,
-                  fontFamily: 'Roboto', // Colocar a fonte real - Ver com a Julia
+                  fontFamily:
+                      'Roboto', // Colocar a fonte real - Ver com a Julia
                 ),
               ),
 
@@ -115,26 +116,43 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
 
               // Botão de Login
+              // Botão de Login
               ElevatedButton(
                 onPressed: () {
-                  // Lógica de login aqui
-                  print('Login pressionado. Usuário: ${_userController.text}');
+                  // Simulação de Login: No futuro, você validará os campos _userController e _passwordController
+                  if (_userController.text.isNotEmpty &&
+                      _passwordController.text.isNotEmpty) {
+                    print('Login bem-sucedido para: ${_userController.text}');
+
+                    // Redireciona para a tela Home
+                    Navigator.pushReplacementNamed(context, '/home');
+                  } else {
+                    // Exibe um aviso caso os campos estejam vazios
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Por favor, preencha o usuário e a senha.',
+                        ),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: appPrimaryOrange,
-                  foregroundColor: Colors.black, // Cor do texto do botão
-                  padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 12.0),
-                  elevation: 5.0, // Sombra do botão
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40.0,
+                    vertical: 12.0,
+                  ),
+                  elevation: 5.0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
                 child: const Text(
                   'Login',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
 
@@ -153,7 +171,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Navigator.pushNamed(context, '/cadastro');
                     },
                     style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero, // Remove padding do botão de texto
+                      padding:
+                          EdgeInsets.zero, // Remove padding do botão de texto
                       minimumSize: const Size(0, 0),
                     ),
                     child: const Text(
@@ -212,12 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
         shape: BoxShape.circle,
       ),
       padding: const EdgeInsets.all(8.0), // Padding interno para a imagem
-      child: Center(
-        child: Image.network(
-          iconPath,
-          fit: BoxFit.contain,
-        ),
-      ),
+      child: Center(child: Image.network(iconPath, fit: BoxFit.contain)),
     );
   }
 }
