@@ -48,9 +48,9 @@ class ProfileProgressScreen extends StatelessWidget {
                             children: [
                               _buildActionCardWrapper(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFFFF3C4), Color(0xFFFFE791)],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
+                                  begin: Alignment(-1.0, -1.0),
+                                  end: Alignment(1.0, 1.0),
+                                  colors: [Color(0xFFFFF4C2), Color(0xFFF5A623)],
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -70,9 +70,25 @@ class ProfileProgressScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 15),
                               _buildActionCardWrapper(
-                                backgroundColor: beeBetterGreyConfig,
-                                child: Center(
-                                  child: Image.network('https://i.imgur.com/74T2Hgf.png', height: 70),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    // 👇 Background — engrenagens pequenas
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.network(
+                                        'https://i.imgur.com/BroeMEP.png', // background
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    // 👇 Ícone centralizado por cima
+                                    Center(
+                                      child: Image.network(
+                                        'https://i.imgur.com/74T2Hgf.png', // ícone central
+                                        height: 70,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

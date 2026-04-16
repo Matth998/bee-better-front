@@ -92,7 +92,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                         ),
                       ],
                       image: const DecorationImage(
-                        image: NetworkImage('https://i.imgur.com/glcip5V.png'),
+                        image: NetworkImage('https://i.imgur.com/gpU56RP.png'),
                         fit: BoxFit.fill,
                       ),
                     ),

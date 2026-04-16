@@ -23,9 +23,14 @@ class FeaturesScreen extends StatelessWidget {
                 return SingleChildScrollView(
                   // Garante que o conteúdo tenha no mínimo a altura da tela
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 40),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 40,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -33,7 +38,8 @@ class FeaturesScreen extends StatelessWidget {
                             title: 'Dashboard',
                             iconPath: 'https://i.imgur.com/JkgOJSC.png',
                             backgroundUrl: 'https://i.imgur.com/8MxywnU.png',
-                            onTap: () => Navigator.pushNamed(context, '/dashboard'),
+                            onTap: () =>
+                                Navigator.pushNamed(context, '/dashboard'),
                           ),
                           _buildMenuCard(
                             title: 'Anotações',
@@ -43,9 +49,10 @@ class FeaturesScreen extends StatelessWidget {
                           ),
                           _buildMenuCard(
                             title: 'Respiração',
-                            iconPath: 'https://i.imgur.com/hTKNkx2.png',
+                            iconPath: 'https://i.imgur.com/qWQd5Uz.png',
                             backgroundUrl: 'https://i.imgur.com/mzDOMAE.png',
-                            onTap: () => Navigator.pushNamed(context, '/breathing'),
+                            onTap: () =>
+                                Navigator.pushNamed(context, '/breathing'),
                           ),
                         ],
                       ),
@@ -101,20 +108,20 @@ class FeaturesScreen extends StatelessWidget {
                   opacity: const AlwaysStoppedAnimation(0.8),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20),
+              Center(
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Image.network(iconPath, width: 60, height: 60),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
                     ),
                   ],
