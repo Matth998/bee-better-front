@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 // Constante para a cor de fundo bege claro
@@ -116,16 +117,27 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
 
               // Botão de Login
-              // Botão de Login
               ElevatedButton(
-                onPressed: () {
-                  // Simulação de Login: No futuro, você validará os campos _userController e _passwordController
-                  if (_userController.text.isNotEmpty &&
-                      _passwordController.text.isNotEmpty) {
-                    print('Login bem-sucedido para: ${_userController.text}');
+                onPressed: () async {
+                  if (_userController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+                    try {
+                      final resultado = await AuthService.login(
+                        _userController.text,
+                        _passwordController.text,
+                      );
 
-                    // Redireciona para a tela Home
-                    Navigator.pushReplacementNamed(context, '/home');
+                      print('Token recebido: ${resultado['token']}');
+
+                      Navigator.pushReplacementNamed(context, '/home');
+
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
                   } else {
                     // Exibe um aviso caso os campos estejam vazios
                     ScaffoldMessenger.of(context).showSnackBar(
