@@ -1,22 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'user_session.dart';
 
 class AuthService {
   static const String baseUrl = 'http://localhost:8080';
 
   // LOGIN
-  static Future<Map<String, dynamic>> login(String usuario, String senha) async {
+  static Future<void> login(String email, String senha) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'email': usuario,
+        'email': email,
         'password': senha,
       }),
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      final user = data['user'];
+      print('RESPONSE COMPLETO: ${response.body}');
+
+      UserSession.salvarSessao(
+        token: data['token'] ?? '',
+        id: user['id'] ?? 0,
+        nome: user['name'] ?? '',
+        email: user['email'] ?? '',
+        dataNascimento: user['dataNascimento'] ?? '',
+        fotoPerfil: user['fotoPerfil'] ?? '',
+        pontuacao: user['pontuacao'] ?? 0,
+        nivel: user['nivel'] ?? 0,
+        moedas: user['moedas'] ?? 0,
+      );
     } else {
       throw Exception('Usuário ou senha inválidos');
     }

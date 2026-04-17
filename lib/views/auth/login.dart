@@ -1,4 +1,5 @@
 import 'package:bee_better_flutter/services/auth_service.dart';
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:flutter/material.dart';
 
 // Constante para a cor de fundo bege claro
@@ -121,12 +122,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () async {
                   if (_userController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
                     try {
-                      final resultado = await AuthService.login(
+                      await AuthService.login(
                         _userController.text,
                         _passwordController.text,
                       );
 
-                      print('Token recebido: ${resultado['token']}');
+                      print('Token recebido: ${UserSession.token}');
 
                       Navigator.pushReplacementNamed(context, '/home');
 

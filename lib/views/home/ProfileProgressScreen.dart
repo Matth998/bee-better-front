@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,9 @@ const Color beeBetterOrange = Color(0xFFF7941D);
 const Color beeBetterBrown = Color(0xFF3D2B1F);
 const Color beeBetterGreyConfig = Color(0xFF4A4A4A);
 
+
 class ProfileProgressScreen extends StatelessWidget {
+
   const ProfileProgressScreen({super.key});
 
   @override
@@ -146,9 +149,9 @@ class ProfileProgressScreen extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _buildInfoField(Icons.person, 'Matheus Silva'),
+                _buildInfoField(Icons.person, UserSession.nome),
                 const SizedBox(height: 10),
-                _buildInfoField(Icons.cake, '20 / 05 / 2002'),
+                _buildInfoField(Icons.cake, UserSession.dataNascimento),
               ],
             ),
           ),

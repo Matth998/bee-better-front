@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:bee_better_flutter/views/splash/flying_bee.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int userLevel = 1;
-    int userCoins = 150;
+    int userCoins = UserSession.moedas;
 
     return Scaffold(
       body: Stack(
