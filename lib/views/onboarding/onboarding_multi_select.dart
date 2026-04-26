@@ -4,7 +4,7 @@ class MultiSelectQuestionPage extends StatefulWidget {
   final String question;
   final String subtitle;
   final List<String> options;
-  final VoidCallback onOptionSelected;
+  final Function(List<String>) onOptionSelected;
 
   const MultiSelectQuestionPage({
     super.key,
@@ -37,7 +37,7 @@ class _MultiSelectQuestionPageState extends State<MultiSelectQuestionPage> {
     return Column(
       children: [
         const SizedBox(height: 60),
-        Image.network('https://i.imgur.com/lwgH7H5.png', height: 80),
+        Image.asset('assets/images/abelha_login.png', height: 80),
         const SizedBox(height: 20),
         Text(
           widget.question,
@@ -79,7 +79,9 @@ class _MultiSelectQuestionPageState extends State<MultiSelectQuestionPage> {
                 // Botão de Próximo fixo embaixo
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _selectedOptions.isNotEmpty ? widget.onOptionSelected : null,
+                  onPressed: _selectedOptions.isNotEmpty
+                      ? () => widget.onOptionSelected(_selectedOptions.toList()) // ← passa a lista
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF7941D),
                     minimumSize: const Size(double.infinity, 55),

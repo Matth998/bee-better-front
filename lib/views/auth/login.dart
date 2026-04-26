@@ -1,3 +1,5 @@
+import 'package:bee_better_flutter/services/auth_service.dart';
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:flutter/material.dart';
 
 // Constante para a cor de fundo bege claro
@@ -50,8 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Imagem da abelha
               Center(
-                child: Image.network(
-                  'https://i.imgur.com/zbBifE3.png',
+                child: Image.asset(
+                  'assets/images/abelha_login.png',
                   height: 120, // Ajuste de tamanho
                 ),
               ),
@@ -116,16 +118,25 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
 
               // Botão de Login
-              // Botão de Login
               ElevatedButton(
-                onPressed: () {
-                  // Simulação de Login: No futuro, você validará os campos _userController e _passwordController
-                  if (_userController.text.isNotEmpty &&
-                      _passwordController.text.isNotEmpty) {
-                    print('Login bem-sucedido para: ${_userController.text}');
+                onPressed: () async {
+                  if (_userController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+                    try {
+                      await AuthService.login(
+                        _userController.text,
+                        _passwordController.text,
+                      );
 
-                    // Redireciona para a tela Home
-                    Navigator.pushReplacementNamed(context, '/home');
+                      Navigator.pushReplacementNamed(context, '/home');
+
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(e.toString()),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
                   } else {
                     // Exibe um aviso caso os campos estejam vazios
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -201,16 +212,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Ícone do Google
-                  _buildSocialIcon('https://i.imgur.com/gE21EKw.jpeg'),
+                  _buildSocialIcon('assets/images/google.jpg'),
                   const SizedBox(width: 15),
                   // Ícone do Instagram
-                  _buildSocialIcon('https://i.imgur.com/Y2xVFpa.png'),
+                  _buildSocialIcon('assets/images/instagram.png'),
                   const SizedBox(width: 15),
                   // Ícone do Facebook
-                  _buildSocialIcon('https://i.imgur.com/LjiSdfk.png'),
+                  _buildSocialIcon('assets/images/facebook.png'),
                   const SizedBox(width: 15),
                   // Ícone do X (Twitter)
-                  _buildSocialIcon('https://i.imgur.com/87p4MIa.png'),
+                  _buildSocialIcon('assets/images/twitter.png'),
                 ],
               ),
               const SizedBox(height: 40), // Espaço inferior
@@ -223,15 +234,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Widget auxiliar para criar os ícones sociais
   Widget _buildSocialIcon(String iconPath) {
-    return Container(
-      width: 45,
-      height: 45,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
+    return ClipOval( // ← recorta em círculo
+      child: SizedBox(
+        width: 45,
+        height: 45,
+        child: Image.asset(iconPath, fit: BoxFit.cover), // ← cover, não contain
       ),
-      padding: const EdgeInsets.all(8.0), // Padding interno para a imagem
-      child: Center(child: Image.network(iconPath, fit: BoxFit.contain)),
     );
   }
 }

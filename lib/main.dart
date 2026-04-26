@@ -10,8 +10,12 @@ import 'package:bee_better_flutter/views/splash/splash_onboarding.dart';
 import 'package:bee_better_flutter/views/splash/splash_pos_onboarding.dart';
 import 'package:bee_better_flutter/views/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('pt_BR', null);
   runApp(const MyApp());
 }
 
@@ -21,6 +25,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('pt', 'BR')],
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
 

@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:bee_better_flutter/views/splash/flying_bee.dart';
 import 'package:flutter/material.dart';
@@ -8,14 +9,14 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int userLevel = 1;
-    int userCoins = 150;
+    int userCoins = UserSession.moedas;
 
     return Scaffold(
       body: Stack(
         children: [
           Container(color: const Color(0xFFCDE7F7)),
-          Image.network(
-              'https://i.imgur.com/XcgcFuj.png',
+          Image.asset(
+              'assets/images/Fundo_nuvens.png',
               width: double.infinity,
               fit: BoxFit.cover
           ),
@@ -31,7 +32,7 @@ class HomeScreen extends StatelessWidget {
           Positioned(
             top: 40,
             left: 20,
-            child: Image.network('https://i.imgur.com/Bj0U6yC.png', height: 120),
+            child: Image.asset('assets/images/colmeia.png', height: 120),
           ),
 
           Align(

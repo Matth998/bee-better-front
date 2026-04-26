@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 const Color appBackgroundColor = Color(0xFFFDF1B8);
@@ -41,8 +42,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
               Center(
-                child: Image.network(
-                  'https://i.imgur.com/zbBifE3.png',
+                child: Image.asset(
+                  'assets/images/abelha_login.png',
                   height: 100,
                 ),
               ),
@@ -85,15 +86,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               // Botão Criar Conta
               ElevatedButton(
-                onPressed: () {
-                  // 1. Aqui colocaráemos a lógica de salvar no banco de dados.
-                  // 2. Se o salvamento der certo, chamamos a tela de transição:
+                onPressed: () async {
+                  // Validação básica dos campos
+                  if (_userController.text.isEmpty ||
+                      _emailController.text.isEmpty ||
+                      _passwordController.text.isEmpty ||
+                      _confirmPasswordController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Preencha todos os campos.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
 
-                  Navigator.pushReplacementNamed(context, '/pre_onboarding');
+                  // Verifica se as senhas coincidem
+                  if (_passwordController.text != _confirmPasswordController.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('As senhas não coincidem.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
 
-                  print(
-                    "Usuário cadastrado! Indo para a introdução do onboarding...",
-                  );
+                  try {
+                    await AuthService.register(
+                      _userController.text,
+                      _emailController.text,
+                      _passwordController.text,
+                    );
+
+                    Navigator.pushReplacementNamed(context, '/pre_onboarding');
+
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: appPrimaryOrange,

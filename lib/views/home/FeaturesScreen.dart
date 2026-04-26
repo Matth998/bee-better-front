@@ -11,8 +11,8 @@ class FeaturesScreen extends StatelessWidget {
         children: [
           // 1. FUNDO COLMEIA
           Positioned.fill(
-            child: Image.network(
-              'https://i.imgur.com/c9STTP1.png',
+            child: Image.asset(
+              'assets/images/fundo_colmeia.png',
               fit: BoxFit.cover,
             ),
           ),
@@ -36,21 +36,21 @@ class FeaturesScreen extends StatelessWidget {
                         children: [
                           _buildMenuCard(
                             title: 'Dashboard',
-                            iconPath: 'https://i.imgur.com/JkgOJSC.png',
-                            backgroundUrl: 'https://i.imgur.com/8MxywnU.png',
+                            iconPath: 'assets/images/dash_icon.png',
+                            backgroundUrl: 'assets/images/fundo_branco_quadricular.png',
                             onTap: () =>
                                 Navigator.pushNamed(context, '/dashboard'),
                           ),
                           _buildMenuCard(
                             title: 'Anotações',
-                            iconPath: 'https://i.imgur.com/Pe0gbo1.png',
-                            backgroundUrl: 'https://i.imgur.com/CAp6y1l.png',
+                            iconPath: 'assets/images/Lapis.png',
+                            backgroundUrl: 'assets/images/fundo_caderno.png',
                             onTap: () => Navigator.pushNamed(context, '/notes'),
                           ),
                           _buildMenuCard(
                             title: 'Respiração',
-                            iconPath: 'https://i.imgur.com/qWQd5Uz.png',
-                            backgroundUrl: 'https://i.imgur.com/mzDOMAE.png',
+                            iconPath: 'assets/images/Nuvem_abelha.png',
+                            backgroundUrl: 'assets/images/fundo_nuvem.png',
                             onTap: () =>
                                 Navigator.pushNamed(context, '/breathing'),
                           ),
@@ -102,7 +102,7 @@ class FeaturesScreen extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: Image.network(
+                child: Image.asset(
                   backgroundUrl,
                   fit: BoxFit.cover,
                   opacity: const AlwaysStoppedAnimation(0.8),
@@ -113,7 +113,7 @@ class FeaturesScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.network(iconPath, width: 60, height: 60),
+                    Image.asset(iconPath, width: 60, height: 60),
                     const SizedBox(width: 8),
                     Text(
                       title,
