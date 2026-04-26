@@ -36,10 +36,10 @@ Para quem tem TDAH, a falta de recompensa imediata pode tornar o início e a con
    git clone [https://github.com/Matth998/bee-better.git](https://github.com/Matth998/bee-better.git)
 2. **Instale as dependências:**
    ```bash
-   npm install
+   flutter pub get
 3. **Inicie a aplicação:**
    ```bash
-   npm start
+   flutter run
 
 ## 🐝 Contribuição
 Sugestões para melhorar a acessibilidade e a experiência de usuários neurodivergentes são sempre bem-vindas!
