@@ -52,8 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Imagem da abelha
               Center(
-                child: Image.network(
-                  'https://i.imgur.com/zbBifE3.png',
+                child: Image.asset(
+                  'assets/images/abelha_login.png',
                   height: 120, // Ajuste de tamanho
                 ),
               ),
@@ -126,8 +126,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         _userController.text,
                         _passwordController.text,
                       );
-
-                      print('Token recebido: ${UserSession.token}');
 
                       Navigator.pushReplacementNamed(context, '/home');
 
@@ -214,16 +212,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Ícone do Google
-                  _buildSocialIcon('https://i.imgur.com/gE21EKw.jpeg'),
+                  _buildSocialIcon('assets/images/google.jpg'),
                   const SizedBox(width: 15),
                   // Ícone do Instagram
-                  _buildSocialIcon('https://i.imgur.com/Y2xVFpa.png'),
+                  _buildSocialIcon('assets/images/instagram.png'),
                   const SizedBox(width: 15),
                   // Ícone do Facebook
-                  _buildSocialIcon('https://i.imgur.com/LjiSdfk.png'),
+                  _buildSocialIcon('assets/images/facebook.png'),
                   const SizedBox(width: 15),
                   // Ícone do X (Twitter)
-                  _buildSocialIcon('https://i.imgur.com/87p4MIa.png'),
+                  _buildSocialIcon('assets/images/twitter.png'),
                 ],
               ),
               const SizedBox(height: 40), // Espaço inferior
@@ -236,15 +234,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Widget auxiliar para criar os ícones sociais
   Widget _buildSocialIcon(String iconPath) {
-    return Container(
-      width: 45,
-      height: 45,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
+    return ClipOval( // ← recorta em círculo
+      child: SizedBox(
+        width: 45,
+        height: 45,
+        child: Image.asset(iconPath, fit: BoxFit.cover), // ← cover, não contain
       ),
-      padding: const EdgeInsets.all(8.0), // Padding interno para a imagem
-      child: Center(child: Image.network(iconPath, fit: BoxFit.contain)),
     );
   }
 }

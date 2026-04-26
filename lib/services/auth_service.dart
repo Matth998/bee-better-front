@@ -10,27 +10,22 @@ class AuthService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': senha,
-      }),
+      body: jsonEncode({'email': email, 'password': senha}),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final user = data['user'];
-      print('RESPONSE COMPLETO: ${response.body}');
-
       UserSession.salvarSessao(
         token: data['token'] ?? '',
         id: user['id'] ?? 0,
         nome: user['name'] ?? '',
         email: user['email'] ?? '',
-        dataNascimento: user['dataNascimento'] ?? '',
-        fotoPerfil: user['fotoPerfil'] ?? '',
+        birthDate: user['birth_date'] ?? '',
+        fotoPerfil: user['profile_picture_url'] ?? '',
         pontuacao: user['pontuacao'] ?? 0,
         nivel: user['nivel'] ?? 0,
-        moedas: user['moedas'] ?? 0,
+        moedas: user['coins'] ?? 0,
       );
     } else {
       throw Exception('Usuário ou senha inválidos');
@@ -38,18 +33,36 @@ class AuthService {
   }
 
   // REGISTER
-  static Future<void> register(String usuario, String email, String senha) async {
+  static Future<void> register(
+    String usuario,
+    String email,
+    String senha,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': usuario,
-        'email': email,
-        'password': senha,
-      }),
+      body: jsonEncode({'name': usuario, 'email': email, 'password': senha}),
     );
 
-    if (response.statusCode != 201) {
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      final user = data['user'];
+
+      UserSession.salvarSessao(
+        token: data['token'] ?? '',
+        id: user['id'] ?? 0,
+        nome: user['name'] ?? '',
+        email: user['email'] ?? '',
+        birthDate: user['birth_date'] ?? '',
+        fotoPerfil: user['profile_picture_url'] != null
+            ? '$baseUrl${user['profile_picture_url']}'
+            : '',
+        pontuacao: user['pontuacao'] ?? 0,
+        nivel: user['nivel'] ?? 0,
+        moedas: user['coins'] ?? 0,
+      );
+
+    } else {
       throw Exception('Erro ao criar conta. Tente novamente.');
     }
   }

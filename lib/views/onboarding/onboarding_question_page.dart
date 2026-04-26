@@ -4,7 +4,7 @@ class OnboardingQuestionPage extends StatelessWidget {
   final String question;
   final String subtitle;
   final List<String> options;
-  final VoidCallback onOptionSelected; // Função para pular de página
+  final Function(String) onOptionSelected; // Função para pular de página
 
   const OnboardingQuestionPage({
     super.key,
@@ -19,7 +19,7 @@ class OnboardingQuestionPage extends StatelessWidget {
     return Column(
       children: [
         const SizedBox(height: 60),
-        Image.network('https://i.imgur.com/lwgH7H5.png', height: 80),
+        Image.asset('assets/images/abelha_login.png', height: 80),
         const SizedBox(height: 20),
         Text(
           question,
@@ -59,7 +59,7 @@ class OnboardingQuestionPage extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       child: ElevatedButton(
-        onPressed: onOptionSelected, // Ao clicar, executa a função de mudar página
+          onPressed: () => onOptionSelected(text), // Ao clicar, executa a função de mudar página
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black54,

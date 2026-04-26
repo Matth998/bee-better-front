@@ -32,8 +32,8 @@ class _PreOnboardingScreenState extends State<PreOnboardingScreen> {
           children: [
             // Imagem da abelha
             Center(
-              child: Image.network(
-                'https://i.imgur.com/zbBifE3.png',
+              child: Image.asset(
+                'assets/images/abelha_login.png',
                 height: 120,
               ),
             ),

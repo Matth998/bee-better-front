@@ -64,8 +64,8 @@ class _FlyingBeeState extends State<FlyingBee> with SingleTickerProviderStateMix
           left: _moveX.value,
           child: Transform.scale(
             scaleX: _facingRight ? 1 : -1, // Espelha a abelha ao voltar
-            child: Image.network(
-              'https://i.imgur.com/mDAiv6K.png',
+            child: Image.asset(
+              'assets/images/abelha.png',
               height: 25,
             ),
           ),

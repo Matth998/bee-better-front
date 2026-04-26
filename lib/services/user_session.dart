@@ -20,7 +20,7 @@ class UserSession {
     required int id,
     required String nome,
     required String email,
-    String dataNascimento = '',
+    String birthDate = '',
     String fotoPerfil = '',
     int pontuacao = 0,
     int nivel = 0,
@@ -30,7 +30,7 @@ class UserSession {
     UserSession.id = id;
     UserSession.nome = nome;
     UserSession.email = email;
-    UserSession.dataNascimento = dataNascimento;
+    UserSession.dataNascimento = birthDate;
     UserSession.fotoPerfil = fotoPerfil;
     UserSession.pontuacao = pontuacao;
     UserSession.nivel = nivel;

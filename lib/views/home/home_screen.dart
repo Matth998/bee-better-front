@@ -15,8 +15,8 @@ class HomeScreen extends StatelessWidget {
       body: Stack(
         children: [
           Container(color: const Color(0xFFCDE7F7)),
-          Image.network(
-              'https://i.imgur.com/XcgcFuj.png',
+          Image.asset(
+              'assets/images/Fundo_nuvens.png',
               width: double.infinity,
               fit: BoxFit.cover
           ),
@@ -32,7 +32,7 @@ class HomeScreen extends StatelessWidget {
           Positioned(
             top: 40,
             left: 20,
-            child: Image.network('https://i.imgur.com/Bj0U6yC.png', height: 120),
+            child: Image.asset('assets/images/colmeia.png', height: 120),
           ),
 
           Align(

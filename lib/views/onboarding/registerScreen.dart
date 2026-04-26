@@ -42,8 +42,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
               Center(
-                child: Image.network(
-                  'https://i.imgur.com/zbBifE3.png',
+                child: Image.asset(
+                  'assets/images/abelha_login.png',
                   height: 100,
                 ),
               ),

@@ -52,8 +52,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             // Efeito de pulso na imagem
             ScaleTransition(
               scale: _animation,
-              child: Image.network(
-                'https://i.imgur.com/lwgH7H5.png',
+              child: Image.asset(
+                'assets/images/abelha_login.png',
                 width: 200,
                 height: 200,
               ),

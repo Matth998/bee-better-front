@@ -1,52 +1,147 @@
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'dart:convert';
 
-// Cores do projeto
 const Color beeBetterYellow = Color(0xFFFFD100);
 const Color beeBetterOrange = Color(0xFFF7941D);
 const Color beeBetterBrown = Color(0xFF3D2B1F);
 const Color beeBetterGreyConfig = Color(0xFF4A4A4A);
 
-
-class ProfileProgressScreen extends StatelessWidget {
-
+class ProfileProgressScreen extends StatefulWidget {
   const ProfileProgressScreen({super.key});
+
+  @override
+  State<ProfileProgressScreen> createState() => _ProfileProgressScreenState();
+}
+
+class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
+
+  final ImagePicker _picker = ImagePicker(); // ← adicionado
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  // Todos os métodos de foto adicionados aqui
+  Future<void> _onProfilePictureTap() async {
+    final hasFoto = UserSession.fotoPerfil.isNotEmpty;
+
+    if (hasFoto) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text('Ver foto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _verFoto();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Mudar foto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _escolherFoto();
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      _escolherFoto();
+    }
+  }
+
+  void _verFoto() {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(UserSession.fotoPerfil, fit: BoxFit.contain),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _escolherFoto() async {
+    print('Abrindo galeria...');
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 800,
+    );
+    print('Imagem selecionada: ${image?.path}');
+    if (image == null) {
+      print('Nenhuma imagem selecionada');
+      return;
+    }
+    print('Chamando upload...');
+    await _uploadFoto(File(image.path));
+  }
+
+  Future<void> _uploadFoto(File file) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://localhost:8080/users/${UserSession.id}/profile-picture'),
+      );
+      request.headers['Authorization'] = 'Bearer ${UserSession.token}';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse); // ← converte aqui
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final json = jsonDecode(response.body);
+        setState(() {
+          UserSession.fotoPerfil = 'http://localhost:8080${json['profilePictureUrl']}';
+        });
+      }
+    } catch (e) {
+      print('Erro ao fazer upload: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. FUNDO COLMEIA
           Positioned.fill(
-            child: Image.network(
-              'https://i.imgur.com/c9STTP1.png',
+            child: Image.asset(
+              'assets/images/fundo_colmeia.png',
               fit: BoxFit.cover,
             ),
           ),
-
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
-                    // Força a altura mínima a ser igual à altura da tela disponível
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
-                        // Distribui os blocos para ocupar o espaço vertical total
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // BLOCO SUPERIOR: Perfil
                           _buildProfileCard(),
-
-                          // BLOCO CENTRAL: Progresso
                           _buildProgressStrip(),
-
-                          // BLOCO INFERIOR: Botões de Ação
                           Row(
                             children: [
                               _buildActionCardWrapper(
@@ -67,7 +162,7 @@ class ProfileProgressScreen extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
-                                    Image.network('https://i.imgur.com/Bj0U6yC.png', height: 60),
+                                    Image.asset('assets/images/colmeia.png', height: 60),
                                   ],
                                 ),
                               ),
@@ -76,18 +171,16 @@ class ProfileProgressScreen extends StatelessWidget {
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    // 👇 Background — engrenagens pequenas
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(20),
-                                      child: Image.network(
-                                        'https://i.imgur.com/BroeMEP.png', // background
+                                      child: Image.asset(
+                                        'assets/images/engrenagem_bg.png',
                                         fit: BoxFit.cover,
                                       ),
                                     ),
-                                    // 👇 Ícone centralizado por cima
                                     Center(
-                                      child: Image.network(
-                                        'https://i.imgur.com/74T2Hgf.png', // ícone central
+                                      child: Image.asset(
+                                        'assets/images/engrenagem_icon.png',
                                         height: 70,
                                       ),
                                     ),
@@ -118,8 +211,6 @@ class ProfileProgressScreen extends StatelessWidget {
     );
   }
 
-  // --- MÉTODOS AUXILIARES ---
-
   Widget _buildProfileCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -132,16 +223,22 @@ class ProfileProgressScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFD4AF37), width: 3),
-              image: const DecorationImage(
-                image: NetworkImage('https://i.imgur.com/lwgH7H5.png'),
-                fit: BoxFit.contain,
+          // ← GestureDetector adicionado na foto
+          GestureDetector(
+            onTap: _onProfilePictureTap,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFD4AF37), width: 3),
+                image: DecorationImage(
+                  image: UserSession.fotoPerfil.isNotEmpty
+                      ? NetworkImage(UserSession.fotoPerfil)
+                      : const AssetImage('assets/images/abelha_login.png'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -218,7 +315,7 @@ class ProfileProgressScreen extends StatelessWidget {
   }
 
   Widget _buildDayItem({bool isFlame = false, bool isCoin = false, bool isDot = false}) {
-    Widget content;
+    Widget content = const SizedBox();
     Color bgColor = const Color(0xFFFDF5E1);
 
     if (isFlame) {

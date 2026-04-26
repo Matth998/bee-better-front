@@ -34,8 +34,8 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         children: [
           // 1. FUNDO DA COLMEIA
           Positioned.fill(
-            child: Image.network(
-              'https://i.imgur.com/c9STTP1.png',
+            child: Image.asset(
+              'assets/images/fundo_colmeia.png',
               fit: BoxFit.cover,
             ),
           ),
@@ -92,7 +92,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                         ),
                       ],
                       image: const DecorationImage(
-                        image: NetworkImage('https://i.imgur.com/gpU56RP.png'),
+                        image: AssetImage('assets/images/mel_escorrendo.png'),
                         fit: BoxFit.fill,
                       ),
                     ),

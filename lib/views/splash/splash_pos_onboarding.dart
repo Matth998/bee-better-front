@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:bee_better_flutter/services/user_session.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class SplashPosOnboarding extends StatefulWidget {
@@ -10,33 +13,72 @@ class SplashPosOnboarding extends StatefulWidget {
 }
 
 class _SplashPosOnboardingState extends State<SplashPosOnboarding>
-    with SingleTickerProviderStateMixin { // Necessário para a animação
+    with SingleTickerProviderStateMixin {
 
   late AnimationController _controller;
+  Future? _onboardingFuture;
 
   @override
   void initState() {
     super.initState();
-    // Configura o tempo de uma volta completa
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(); // Faz a animação repetir infinitamente
-
-    // LOGICA DE TRANSIÇÃO:
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) { // Verifica se o usuário não saiu da tela antes do tempo
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    });
-
+    )..repeat();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_onboardingFuture == null) {
+      _onboardingFuture = ModalRoute.of(context)?.settings.arguments as Future?;
+      _waitAndNavigate();
+    }
+  }
 
+  Future<void> _waitAndNavigate() async {
+    try {
+      await Future.wait([
+        Future.delayed(const Duration(seconds: 4)),
+        if (_onboardingFuture != null) _onboardingFuture!,
+      ]);
+
+      // Busca os dados atualizados antes de ir para a home
+      await _refreshUserSession();
+
+      if (mounted) Navigator.pushReplacementNamed(context, '/home');
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao salvar dados. Tente novamente.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      }
+    }
+  }
+
+  Future<void> _refreshUserSession() async {
+    final response = await http.get(
+      Uri.parse('http://localhost:8080/users/${UserSession.id}'),
+      headers: {
+        'Authorization': 'Bearer ${UserSession.token}',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      UserSession.dataNascimento = json['birth_date'] ?? '';
+      //ADICIONAR CAMPOS FALTANTES
+    }
+  }
 
   @override
   void dispose() {
-    _controller.dispose(); // Importante para não gastar memória
+    _controller.dispose();
     super.dispose();
   }
 
@@ -49,11 +91,10 @@ class _SplashPosOnboardingState extends State<SplashPosOnboarding>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo da Abelha (Estático)
               Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: Image.network(
-                  'https://i.imgur.com/lwgH7H5.png',
+                child: Image.asset(
+                  'assets/images/abelha_login.png',
                   height: 120,
                   fit: BoxFit.contain,
                 ),
@@ -61,12 +102,11 @@ class _SplashPosOnboardingState extends State<SplashPosOnboarding>
 
               const SizedBox(height: 20),
 
-              // O Anel de Carregamento (Animado)
               RotationTransition(
-                turns: _controller, // O controller faz ele girar
-                child: Image.network(
-                  'https://i.imgur.com/dIbDBnq.png',
-                  height: 45, // Ajuste leve no tamanho para destaque
+                turns: _controller,
+                child: Image.asset(
+                  'assets/images/anel_carregando.png',
+                  height: 45,
                   fit: BoxFit.contain,
                 ),
               ),

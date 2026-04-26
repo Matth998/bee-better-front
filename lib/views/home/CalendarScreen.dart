@@ -1,5 +1,6 @@
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -9,9 +10,9 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  DateTime selectedDate = DateTime.now(); // Controla o círculo no dia atual
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
 
-  // Simulação de tarefas por dia
   final List<String> tasks = [
     "Comprar o bolo",
     "Limpar a casa",
@@ -20,28 +21,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedDay = _focusedDay;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. FUNDO COLMEIA
+          // FUNDO COLMEIA
           Positioned.fill(
-            child: Image.network(
-              'https://i.imgur.com/c9STTP1.png',
+            child: Image.asset(
+              'assets/images/fundo_colmeia.png',
               fit: BoxFit.cover,
             ),
           ),
 
-          // 2. CONTEÚDO
+          // CONTEÚDO
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // CARD DO CALENDÁRIO
-                  _buildCalendarCard(screenHeight),
+                  // CALENDÁRIO DINÂMICO
+                  _buildDynamicCalendar(),
 
                   const SizedBox(height: 20),
 
@@ -58,16 +65,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                   const SizedBox(height: 10),
 
-                  // LISTA DE TAREFAS DO DIA
+                  // LISTA DE TAREFAS
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: tasks.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _buildTaskTile(tasks[index], screenHeight),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, index) => _buildTaskTile(tasks[index], screenHeight),
                   ),
 
-                  const SizedBox(height: 100), // Espaço para o menu
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -75,7 +82,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
       bottomNavigationBar: CustomBottomNav(
-        currentIndex: 1, // 1 é o ícone do Calendário
+        currentIndex: 1,
         onTap: (index) {
           if (index == 4) Navigator.pushNamed(context, '/home');
           if (index == 0) Navigator.pushNamed(context, '/alarms');
@@ -86,60 +93,75 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // Widget do Card de Calendário
-  Widget _buildCalendarCard(double screenHeight) {
+  Widget _buildDynamicCalendar() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
       ),
-      child: Column(
-        children: [
-          // TOPO MARROM (Novembro)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            decoration: const BoxDecoration(
-              color: Color(0xFF3D2B1F), // Marrom escuro do design
-              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: TableCalendar(
+          locale: 'pt_BR',
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+          },
+          headerStyle: const HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            decoration: BoxDecoration(
+              color: Color(0xFF3D2B1F),
             ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(Icons.arrow_left, color: Color(0xFFF7941D)),
-                Text(
-                  "Novembro",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                Icon(Icons.arrow_right, color: Color(0xFFF7941D)),
-              ],
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
+            leftChevronIcon: Icon(Icons.chevron_left, color: Color(0xFFF7941D)),
+            rightChevronIcon: Icon(Icons.chevron_right, color: Color(0xFFF7941D)),
           ),
-          // CORPO DO CALENDÁRIO
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Image.network(
-              'https://i.imgur.com/g5prqZ2.png', // Necessário colocar calendario real
-              fit: BoxFit.contain,
+          calendarStyle: const CalendarStyle(
+            selectedDecoration: BoxDecoration(
+              color: Color(0xFFF7941D),
+              shape: BoxShape.circle,
             ),
+            todayDecoration: BoxDecoration(
+              color: Color(0xFFFFD100),
+              shape: BoxShape.circle,
+            ),
+            todayTextStyle: TextStyle(
+              color: Color(0xFF3D2B1F),
+              fontWeight: FontWeight.bold,
+            ),
+            defaultTextStyle: TextStyle(color: Color(0xFF3D2B1F)),
+            weekendTextStyle: TextStyle(color: Color(0xFF3D2B1F)),
+            outsideTextStyle: TextStyle(color: Colors.grey),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // Itens da lista de tarefas com o círculo de check à esquerda
   Widget _buildTaskTile(String title, double screenHeight) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 15, vertical: screenHeight * 0.018),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5),
+        ],
       ),
       child: Row(
         children: [
-          // CÍRCULO DE STATUS
           Container(
             width: 18,
             height: 18,
