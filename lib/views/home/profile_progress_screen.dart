@@ -145,6 +145,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                           Row(
                             children: [
                               _buildActionCardWrapper(
+                                onTap: () => Navigator.pushNamed(context, '/shop'),
                                 gradient: const LinearGradient(
                                   begin: Alignment(-1.0, -1.0),
                                   end: Alignment(1.0, 1.0),
@@ -168,6 +169,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                               ),
                               const SizedBox(width: 15),
                               _buildActionCardWrapper(
+                                onTap: () => Navigator.pushNamed(context, '/settings'),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -223,7 +225,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
       ),
       child: Row(
         children: [
-          // ← GestureDetector adicionado na foto
+          // ← GestureDetector na foto
           GestureDetector(
             onTap: _onProfilePictureTap,
             child: Container(
@@ -345,20 +347,24 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
     required Widget child,
     LinearGradient? gradient,
     Color? backgroundColor,
+    VoidCallback? onTap,
   }) {
     return Expanded(
-      child: Container(
-        height: 160,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
-          ],
-        ),
-        child: Center(child: child),
-      ),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
+              ],
+            ),
+            child: Center(child: child),
+          ),
+        )
     );
   }
 }

@@ -10,9 +10,9 @@ class UserSession {
   static String fotoPerfil = '';
 
   // Gamificação
-  static int pontuacao = 0;
-  static int nivel = 0;
+  static int nivel = 1;
   static int moedas = 0;
+  static int experiencia = 0;
 
   // Salva os dados após login
   static void salvarSessao({
@@ -22,9 +22,9 @@ class UserSession {
     required String email,
     String birthDate = '',
     String fotoPerfil = '',
-    int pontuacao = 0,
-    int nivel = 0,
+    int nivel = 1,
     int moedas = 0,
+    int experiencia = 0,
   }) {
     UserSession.token = token;
     UserSession.id = id;
@@ -32,9 +32,9 @@ class UserSession {
     UserSession.email = email;
     UserSession.dataNascimento = birthDate;
     UserSession.fotoPerfil = fotoPerfil;
-    UserSession.pontuacao = pontuacao;
     UserSession.nivel = nivel;
     UserSession.moedas = moedas;
+    UserSession.experiencia = experiencia;
   }
 
   // Limpa tudo no logout
@@ -45,8 +45,8 @@ class UserSession {
     email = '';
     dataNascimento = '';
     fotoPerfil = '';
-    pontuacao = 0;
-    nivel = 0;
+    nivel = 1;
     moedas = 0;
+    experiencia = 0;
   }
 }

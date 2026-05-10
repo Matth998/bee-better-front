@@ -16,16 +16,19 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final user = data['user'];
+
       UserSession.salvarSessao(
         token: data['token'] ?? '',
         id: user['id'] ?? 0,
         nome: user['name'] ?? '',
         email: user['email'] ?? '',
         birthDate: user['birth_date'] ?? '',
-        fotoPerfil: user['profile_picture_url'] ?? '',
-        pontuacao: user['pontuacao'] ?? 0,
-        nivel: user['nivel'] ?? 0,
+        fotoPerfil: user['profile_picture_url'] != null
+            ? '$baseUrl${user['profile_picture_url']}'
+            : '',
+        nivel: user['mascot_level'] ?? 1,       // ← atualizado
         moedas: user['coins'] ?? 0,
+        experiencia: user['mascot_experience'] ?? 0, // ← adicionado
       );
     } else {
       throw Exception('Usuário ou senha inválidos');
@@ -34,10 +37,10 @@ class AuthService {
 
   // REGISTER
   static Future<void> register(
-    String usuario,
-    String email,
-    String senha,
-  ) async {
+      String usuario,
+      String email,
+      String senha,
+      ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -57,11 +60,10 @@ class AuthService {
         fotoPerfil: user['profile_picture_url'] != null
             ? '$baseUrl${user['profile_picture_url']}'
             : '',
-        pontuacao: user['pontuacao'] ?? 0,
-        nivel: user['nivel'] ?? 0,
+        nivel: user['mascot_level'] ?? 1,       // ← atualizado
         moedas: user['coins'] ?? 0,
+        experiencia: user['mascot_experience'] ?? 0, // ← adicionado
       );
-
     } else {
       throw Exception('Erro ao criar conta. Tente novamente.');
     }
