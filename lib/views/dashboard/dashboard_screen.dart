@@ -14,16 +14,13 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> history = [];
   bool loading = true;
-
-  // Meses exibidos (últimos 4)
   late List<DateTime> months;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    months = List.generate(4, (i) =>
-        DateTime(now.year, now.month - 3 + i, 1));
+    months = List.generate(4, (i) => DateTime(now.year, now.month - 3 + i, 1));
     _fetchHistory();
   }
 
@@ -33,36 +30,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final start = months.first;
       final end = DateTime(months.last.year, months.last.month + 1, 0);
 
-      final startStr = '${start.year}-${start.month.toString().padLeft(2, '0')}-01';
-      final endStr = '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
+      final startStr =
+          '${start.year}-${start.month.toString().padLeft(2, '0')}-01';
+      final endStr =
+          '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
 
       final response = await http.get(
-        Uri.parse('http://localhost:8080/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
+        Uri.parse(
+            'http://localhost:8080/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
 
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         setState(() {
-          history = data.map((d) => {
+          history = data
+              .map((d) => {
             'date': d['date'],
             'completed_tasks': d['completed_tasks'] ?? 0,
             'total_tasks': d['total_tasks'] ?? 0,
-          }).toList();
+            'mood': d['mood'],
+          })
+              .toList();
         });
       }
     } catch (e) {
-      print('Erro ao buscar histórico: $e');
+      debugPrint('Erro ao buscar histórico: $e');
     } finally {
       setState(() => loading = false);
     }
   }
 
-  Color _getColor(int completed, int total) {
-    if (total == 0 && completed == 0) return Colors.grey.shade200; // sem dados
-    if (completed == 0) return const Color(0xFFE57373); // vermelho
-    if (completed >= total) return const Color(0xFF81C784); // verde
-    return const Color(0xFFFFD54F); // amarelo
+  Color _getColor(String? mood, int completed, int total) {
+    if (mood == 'POSITIVE') return const Color(0xFF81C784);
+    if (mood == 'NEUTRAL') return const Color(0xFFFFD54F);
+    if (mood == 'NEGATIVE') return const Color(0xFFE57373);
+    if (total == 0 && completed == 0) return Colors.grey.shade200;
+    if (completed == 0) return const Color(0xFFE57373);
+    if (completed >= total) return const Color(0xFF81C784);
+    return const Color(0xFFFFD54F);
   }
 
   Map<String, dynamic>? _getProgressForDate(String dateStr) {
@@ -70,6 +76,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return history.firstWhere((h) => h['date'] == dateStr);
     } catch (_) {
       return null;
+    }
+  }
+
+  // Retorna os últimos 30 dias com humor registrado
+  List<Map<String, dynamic>> get _humorHistory {
+    final now = DateTime.now();
+    final result = <Map<String, dynamic>>[];
+    for (int i = 29; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final progress = _getProgressForDate(dateStr);
+      result.add({
+        'date': date,
+        'dateStr': dateStr,
+        'mood': progress?['mood'],
+      });
+    }
+    return result;
+  }
+
+  String _moodEmoji(String? mood) {
+    switch (mood) {
+      case 'POSITIVE':
+        return '😊';
+      case 'NEUTRAL':
+        return '😐';
+      case 'NEGATIVE':
+        return '😔';
+      default:
+        return '·';
+    }
+  }
+
+  Color _moodColor(String? mood) {
+    switch (mood) {
+      case 'POSITIVE':
+        return const Color(0xFF81C784);
+      case 'NEUTRAL':
+        return const Color(0xFFFFD54F);
+      case 'NEGATIVE':
+        return const Color(0xFFE57373);
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  String _moodLabel(String? mood) {
+    switch (mood) {
+      case 'POSITIVE':
+        return 'Positivo';
+      case 'NEUTRAL':
+        return 'Neutro';
+      case 'NEGATIVE':
+        return 'Negativo';
+      default:
+        return '-';
     }
   }
 
@@ -87,7 +150,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SafeArea(
             child: Column(
               children: [
-                // HEADER
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -97,22 +159,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF7941D), // ← laranja
+                            color: const Color(0xFFF7941D),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.chevron_left, color: Colors.white), // ← ícone branco
+                          child: const Icon(Icons.chevron_left,
+                              color: Colors.white),
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       children: [
-                        // CARD GRID DE PROGRESSO
+                        // ── CARD HEATMAP ──
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -128,7 +190,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   color: Color(0xFFF7941D)))
                               : Column(
                             children: [
-                              // CABEÇALHO DOS MESES
                               Row(
                                 children: [
                                   const SizedBox(width: 30),
@@ -147,8 +208,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-
-                              // GRID POR DIA DA SEMANA
                               ...List.generate(7, (dayIndex) {
                                 final diasSemana = [
                                   'Dom', 'Seg', 'Ter', 'Qua',
@@ -175,7 +234,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             mainAxisAlignment:
                                             MainAxisAlignment
                                                 .spaceEvenly,
-                                            children: _getDaysOfWeekInMonth(
+                                            children:
+                                            _getDaysOfWeekInMonth(
                                                 month, dayIndex)
                                                 .map((date) {
                                               final dateStr =
@@ -183,15 +243,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               final progress =
                                               _getProgressForDate(
                                                   dateStr);
-                                              final completed = progress?[
-                                              'completed_tasks'] ??
-                                                  0;
-                                              final total =
-                                                  progress?['total_tasks'] ??
+                                              final completed =
+                                                  progress?[
+                                                  'completed_tasks'] ??
                                                       0;
-                                              final isFuture = date
-                                                  .isAfter(DateTime.now());
-
+                                              final total =
+                                                  progress?[
+                                                  'total_tasks'] ??
+                                                      0;
+                                              final mood =
+                                              progress?['mood']
+                                              as String?;
+                                              final isFuture =
+                                              date.isAfter(
+                                                  DateTime.now());
                                               return Container(
                                                 width: 8,
                                                 height: 8,
@@ -203,8 +268,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       ? Colors
                                                       .grey.shade100
                                                       : _getColor(
-                                                      completed,
-                                                      total),
+                                                    mood,
+                                                    completed,
+                                                    total,
+                                                  ),
                                                   borderRadius:
                                                   BorderRadius
                                                       .circular(2),
@@ -218,10 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 );
                               }),
-
                               const SizedBox(height: 12),
-
-                              // LEGENDA
                               Row(
                                 mainAxisAlignment:
                                 MainAxisAlignment.center,
@@ -231,8 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       'Positivo'),
                                   const SizedBox(width: 16),
                                   _buildLegend(
-                                      const Color(0xFFFFD54F),
-                                      'Neutro'),
+                                      const Color(0xFFFFD54F), 'Neutro'),
                                   const SizedBox(width: 16),
                                   _buildLegend(
                                       const Color(0xFFE57373),
@@ -245,49 +308,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         const SizedBox(height: 16),
 
-                        // CARD METAS (placeholder)
+                        // ── CARD HISTÓRICO DE HUMOR ──
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: const Color(0xFF64B5F6), width: 1.5),
                             boxShadow: const [
                               BoxShadow(color: Colors.black12, blurRadius: 8)
                             ],
                           ),
-                          child: Column(
+                          child: loading
+                              ? const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFFF7941D)))
+                              : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Cabeçalho
                               Row(
                                 mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
                                 children: const [
-                                  Text('Metas',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  Text('Essa semana v',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black45)),
+                                  Text(
+                                    'Histórico de Humor',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Últimos 30 dias',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black45,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              const Text('0 Metas concluídas',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.black45)),
-                              const SizedBox(height: 20),
-                              const Center(
-                                child: Text(
-                                  'Nenhuma meta concluída nesse período.\nAdicione e conclua metas para ter acesso ao insight.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: Colors.black45, fontSize: 13),
+                              const SizedBox(height: 4),
+
+                              // Contagem de registros
+                              Text(
+                                '${_humorHistory.where((h) => h['mood'] != null).length} dias registrados',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black45,
                                 ),
                               ),
-                              const SizedBox(height: 20),
+
+                              const SizedBox(height: 16),
+
+                              // Lista de dias com humor
+                              _humorHistory
+                                  .where((h) => h['mood'] != null)
+                                  .isEmpty
+                                  ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 20),
+                                  child: Text(
+                                    'Nenhum humor registrado nesse período.\nResponda a pergunta diária para ver seu histórico.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.black45,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              )
+                                  : Column(
+                                children: _humorHistory
+                                    .where(
+                                        (h) => h['mood'] != null)
+                                    .map((h) =>
+                                    _buildHumorItem(h))
+                                    .toList(),
+                              ),
                             ],
                           ),
                         ),
@@ -308,23 +406,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (index == 4) Navigator.pushNamed(context, '/home');
           if (index == 0) Navigator.pushNamed(context, '/alarms');
           if (index == 1) Navigator.pushNamed(context, '/calendar');
+          if (index == 5) Navigator.pushNamed(context, '/menu');
         },
       ),
     );
   }
 
-  // Retorna todos os dias de um mês que caem num dia da semana específico
+  Widget _buildHumorItem(Map<String, dynamic> h) {
+    final date = h['date'] as DateTime;
+    final mood = h['mood'] as String?;
+    final months = [
+      '', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+      'jul', 'ago', 'set', 'out', 'nov', 'dez',
+    ];
+    final dateLabel = '${date.day} de ${months[date.month]}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _moodColor(mood).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _moodColor(mood), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Text(
+            _moodEmoji(mood),
+            style: const TextStyle(fontSize: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _moodLabel(mood),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _moodColor(mood).withOpacity(0.9),
+              ),
+            ),
+          ),
+          Text(
+            dateLabel,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<DateTime> _getDaysOfWeekInMonth(DateTime month, int weekday) {
     final List<DateTime> days = [];
-    final daysInMonth =
-        DateTime(month.year, month.month + 1, 0).day;
-
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     for (int d = 1; d <= daysInMonth; d++) {
       final date = DateTime(month.year, month.month, d);
-      if (date.weekday % 7 == weekday) {
-        // weekday: Dom=0, Seg=1... Sáb=6
-        days.add(date);
-      }
+      if (date.weekday % 7 == weekday) days.add(date);
     }
     return days;
   }

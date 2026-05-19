@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
+import 'package:bee_better_flutter/services/user_session.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:io';
 
 class SettingsScreen extends StatefulWidget {
@@ -23,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Experiência
   bool _ativarNotificacoes = false;
   bool _ativarLembretes = false;
+  String _tipoComemoracao = 'animado';
 
   // Período de atividade
   int _horaAcorda = 6;
@@ -66,6 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _minutoDescansoInicio = prefs.getInt('minuto_descanso_inicio') ?? 0;
       _horaDescansoFim = prefs.getInt('hora_descanso_fim') ?? 8;
       _minutoDescansoFim = prefs.getInt('minuto_descanso_fim') ?? 0;
+      _tipoComemoracao = prefs.getString('tipo_comemoracao') ?? 'animado';
     });
   }
 
@@ -83,15 +88,175 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveModoDescanso() async {
+    // Salva localmente
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('hora_descanso_inicio', _horaDescansoInicio);
     await prefs.setInt('minuto_descanso_inicio', _minutoDescansoInicio);
     await prefs.setInt('hora_descanso_fim', _horaDescansoFim);
     await prefs.setInt('minuto_descanso_fim', _minutoDescansoFim);
+
+    // Envia para o backend
+    try {
+      final sleepTime =
+          '${_horaDescansoInicio.toString().padLeft(2, '0')}:${_minutoDescansoInicio.toString().padLeft(2, '0')}:00';
+      final wakeTime =
+          '${_horaDescansoFim.toString().padLeft(2, '0')}:${_minutoDescansoFim.toString().padLeft(2, '0')}:00';
+
+      await http.patch(
+        Uri.parse('http://localhost:8080/daily-progress/user/${UserSession.id}/sleep'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${UserSession.token}',
+        },
+        body: jsonEncode({
+          'sleepTime': sleepTime,
+          'wakeTime': wakeTime,
+        }),
+      );
+    } catch (e) {
+      debugPrint('Erro ao salvar sono: $e');
+    }
   }
 
   String _formatTime(int hora, int minuto) {
     return '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}';
+  }
+
+  void _abrirComemoracao() {
+    String tempComemoracao = _tipoComemoracao; // Salva o estado atual
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Ocupa apenas o tamanho do conteúdo
+                children: [
+                  // Indicador visual de arraste
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Área de seleção com os dois cards
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // --- Opção ESTÁTICO ---
+                      _buildOptionCard(
+                        title: 'Estático',
+                        imagePath: 'assets/images/comemoracao_estatico.png',
+                        isSelected: tempComemoracao == 'estatico',
+                        onTap: () => setModalState(() => tempComemoracao = 'estatico'),
+                      ),
+
+                      // --- Opção ANIMADO ---
+                      _buildOptionCard(
+                        title: 'Animado',
+                        imagePath: 'assets/images/comemoracao_animado.png',
+                        isSelected: tempComemoracao == 'animado',
+                        onTap: () => setModalState(() => tempComemoracao = 'animado'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Botão "Selecionar" (Salvar)
+                  ElevatedButton(
+                    onPressed: () async {
+                      // 1. Atualiza o estado da tela principal
+                      setState(() {
+                        _tipoComemoracao = tempComemoracao;
+                      });
+                      // 2. Salva a escolha no SharedPreferences
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('tipo_comemoracao', tempComemoracao);
+                      // 3. Fecha o modal
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF7941D), // Cor Laranja do Bee Better
+                      minimumSize: const Size(double.infinity, 46),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Selecionar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+// Widget auxiliar para construir os cards de opção com borda dinâmica
+  Widget _buildOptionCard({
+    required String title,
+    required String imagePath,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? const Color(0xFFF7941D) : Colors.grey.shade300,
+                width: isSelected ? 2.5 : 1.0,
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              // Fallback temporário caso a imagem ainda não exista no projeto
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.celebration,
+                size: 50,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.black : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _abrirPeriodoAtividade() {
@@ -729,7 +894,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _buildNavTile(
                                 'Comemoração',
                                 'Escolha a forma de comemorar suas vitórias',
-                                onTap: () {},
+                                onTap: _abrirComemoracao,
                               ),
                               _buildNavTile(
                                 'Período de atividade',

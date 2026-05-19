@@ -1,5 +1,6 @@
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:table_calendar/table_calendar.dart';
@@ -46,6 +47,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             'titulo': t['title'],
             'descricao': t['description'] ?? '',
             'concluida': t['completed'],
+            'isMission': t['is_mission'] ?? false,
+            'targetCount': t['target_count'] ?? 0,
+            'currentCount': t['current_count'] ?? 0,
           })
               .toList();
         });
@@ -69,10 +73,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       if (response.statusCode == 200) {
         setState(() => tasks[index]['concluida'] = true);
-
         UserSession.moedas += 10;
         UserSession.experiencia += 20;
-
         if (UserSession.experiencia >= UserSession.nivel * 100) {
           UserSession.nivel += 1;
           UserSession.experiencia = 0;
@@ -86,7 +88,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _mostrarRecompensa() {
+  Future<void> _incrementarMissao(int index) async {
+    final task = tasks[index];
+    try {
+      final response = await http.patch(
+        Uri.parse(
+            'http://localhost:8080/tasks/${task['id']}/progress?increment=1'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          tasks[index]['currentCount'] = data['current_count'];
+          tasks[index]['targetCount'] = data['target_count'];
+          tasks[index]['concluida'] = data['completed'];
+        });
+        if (data['completed'] == true) _mostrarRecompensa();
+      }
+    } catch (e) {
+      print('Erro ao incrementar missão: $e');
+    }
+  }
+
+  Future<void> _mostrarRecompensa() async {
+    // 1. Busca a preferência salva pelo usuário nas configurações (Padrão: animado)
+    final prefs = await SharedPreferences.getInstance();
+    final String tipoComemoracao = prefs.getString('tipo_comemoracao') ?? 'animado';
+
+    // 2. Define o caminho da imagem de forma dinâmica baseado no valor do SharedPreferences
+    final String imagePath = tipoComemoracao == 'estatico'
+        ? 'assets/images/comemoracao_estatico.png'
+        : 'assets/images/comemoracao_animado.png';
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -95,41 +130,99 @@ class _CalendarScreenState extends State<CalendarScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            color: const Color(0xFFFFFDE7), // Fundo bege claro/amarelado do design
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE0DB9A), width: 1),
             boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 20)
+              BoxShadow(color: Colors.black12, blurRadius: 15, offset: Offset(0, 5))
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('🎉', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 12),
-              const Text('Tarefa concluída!',
-                  style:
-                  TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
+              // Linha Superior com as Imagens Laterais e o Texto Centralizado
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Imagem Esquerda
+                  SizedBox(
+                    width: 45,
+                    height: 45,
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+
+                  // Bloco de Texto centralizado
+                  const Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          'Parabéns!',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Você concluiu a tarefa!',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Imagem Direita (Invertida horizontalmente para o efeito de espelho do design)
+                  SizedBox(
+                    width: 45,
+                    height: 45,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.rotationY(3.14159), // Inverte no eixo Y
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Linha Inferior com os Ganhos de Moedas e XP
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.monetization_on, color: Color(0xFFF7941D)),
+                children: [
+                  Icon(Icons.monetization_on, color: Color(0xFFF7941D), size: 22),
                   SizedBox(width: 4),
-                  Text('+10 moedas',
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFFF7941D),
-                          fontWeight: FontWeight.bold)),
-                  SizedBox(width: 16),
-                  Icon(Icons.star, color: Color(0xFFFFD100)),
+                  Text(
+                    '+10 moedas',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 24),
+                  Icon(Icons.star, color: Color(0xFF26A69A), size: 22), // Cor verde/turquesa da estrela
                   SizedBox(width: 4),
-                  Text('+20 XP',
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFFFFD100),
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    '+20 XP',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -137,6 +230,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
     });
@@ -208,25 +302,100 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  void _abrirModalNovaTarefa() {
+  // ─── MODAL ESCOLHA ───────────────────────────────────────────────
+  void _abrirModalEscolha() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('Escolha',
+                style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text(
+              'Selecione se deseja adicionar uma meta ou uma missão',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.black45),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _abrirModalMeta();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    child: const Text('Meta',
+                        style: TextStyle(
+                            fontSize: 16, color: Colors.black87)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _abrirModalMissao();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    child: const Text('Missão',
+                        style: TextStyle(
+                            fontSize: 16, color: Colors.black87)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── MODAL META ──────────────────────────────────────────────────
+  void _abrirModalMeta() {
     final tituloController = TextEditingController();
     final descricaoController = TextEditingController();
-    TimeOfDay horaInicio = TimeOfDay.now();
-    TimeOfDay horaFim = TimeOfDay(
-        hour: TimeOfDay.now().hour,
-        minute: TimeOfDay.now().minute + 30 >= 60
-            ? TimeOfDay.now().minute + 30 - 60
-            : TimeOfDay.now().minute + 30);
+    final divideController = TextEditingController();
     bool recorrente = false;
-    bool diaInteiro = false;
+    bool diaInteiro = true;
     bool naoSeRepete = false;
-    String repeticaoSelecionada = 'Todas as semanas';
+    bool divide = false;
+    String repeticao = 'Todas as semanas';
     List<bool> diasSemana = [false, true, true, false, true, true, true];
+    TimeOfDay horaInicio = TimeOfDay.now();
+    TimeOfDay horaFim = TimeOfDay.now();
 
-    final List<String> nomeDias = [
-      'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'
-    ];
-    final List<String> opcoesRepeticao = [
+    final nomeDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    final opcoesRepeticao = [
       'Todos os dias',
       'Todas as semanas',
       'Todos os meses',
@@ -240,372 +409,568 @@ class _CalendarScreenState extends State<CalendarScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.85,
-                child: Column(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF176),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: TextField(
-                                controller: tituloController,
-                                textAlign: TextAlign.center,
-                                decoration: const InputDecoration(
-                                  hintText: 'Adicionar um nome',
-                                  hintStyle:
-                                  TextStyle(color: Colors.black45),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 14),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.85,
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // NOME
+                        _buildTextField(tituloController, 'Adicionar um nome'),
+                        const SizedBox(height: 12),
+
+                        // RECORRENTE
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Text('Recorrente',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14)),
-                                      Switch(
-                                        value: recorrente,
-                                        onChanged: (val) => setModalState(
-                                                () => recorrente = val),
-                                        activeColor:
-                                        const Color(0xFFF7941D),
-                                      ),
-                                      if (recorrente)
-                                        Expanded(
-                                          child: Row(
-                                            mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                            children:
-                                            List.generate(7, (i) {
-                                              return GestureDetector(
-                                                onTap: () => setModalState(
-                                                        () => diasSemana[i] =
-                                                    !diasSemana[i]),
-                                                child: Container(
-                                                  width: 28,
-                                                  height: 28,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: diasSemana[i]
-                                                        ? const Color(
-                                                        0xFFF7941D)
-                                                        : const Color(
-                                                        0xFFFFF9C4),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(
-                                                      nomeDias[i],
-                                                      style: TextStyle(
-                                                        fontSize: 8,
-                                                        fontWeight:
-                                                        FontWeight.bold,
-                                                        color: diasSemana[i]
-                                                            ? Colors.white
-                                                            : Colors.black54,
-                                                      ),
+                                  const Text('Recorrente',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14)),
+                                  Switch(
+                                    value: recorrente,
+                                    onChanged: (val) => setModalState(
+                                            () => recorrente = val),
+                                    activeColor: const Color(0xFFF7941D),
+                                  ),
+                                  if (recorrente)
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal, // ← scroll horizontal se necessário
+                                        child: Row(
+                                          children: List.generate(7, (i) {
+                                            return GestureDetector(
+                                              onTap: () => setModalState(
+                                                      () => diasSemana[i] = !diasSemana[i]),
+                                              child: Container(
+                                                width: 24, // ← era 28, reduziu
+                                                height: 24, // ← era 28, reduziu
+                                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: diasSemana[i]
+                                                      ? const Color(0xFFF7941D)
+                                                      : const Color(0xFFFFF9C4),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    nomeDias[i],
+                                                    style: TextStyle(
+                                                      fontSize: 7, // ← era 8, reduziu
+                                                      fontWeight: FontWeight.bold,
+                                                      color: diasSemana[i]
+                                                          ? Colors.white
+                                                          : Colors.black54,
                                                     ),
                                                   ),
                                                 ),
-                                              );
-                                            }),
-                                          ),
+                                              ),
+                                            );
+                                          }),
                                         ),
-                                    ],
-                                  ),
-                                  if (recorrente)
-                                    const Padding(
-                                      padding: EdgeInsets.only(bottom: 6),
-                                      child: Text(
-                                        'Ativando a recorrência ela ficará ativa semanalmente',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.black45),
                                       ),
                                     ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time,
-                                      size: 18, color: Colors.black54),
-                                  const SizedBox(width: 8),
-                                  const Text('Dia inteiro',
-                                      style: TextStyle(fontSize: 14)),
-                                  Switch(
-                                    value: diaInteiro,
-                                    onChanged: (val) => setModalState(
-                                            () => diaInteiro = val),
-                                    activeColor: const Color(0xFFF7941D),
+                              if (recorrente)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    'Ativando a recorrência ela ficará ativa semanalmente',
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.black45),
                                   ),
-                                  const Spacer(),
-                                  if (!diaInteiro) ...[
-                                    GestureDetector(
-                                      onTap: () async {
-                                        final picked = await showTimePicker(
-                                            context: context,
-                                            initialTime: horaInicio);
-                                        if (picked != null)
-                                          setModalState(
-                                                  () => horaInicio = picked);
-                                      },
-                                      child: Text(
-                                        '${horaInicio.hour.toString().padLeft(2, '0')}:${horaInicio.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15),
-                                      ),
-                                    ),
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 4),
-                                      child: Text(' - ',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () async {
-                                        final picked = await showTimePicker(
-                                            context: context,
-                                            initialTime: horaFim);
-                                        if (picked != null)
-                                          setModalState(
-                                                  () => horaFim = picked);
-                                      },
-                                      child: Text(
-                                        '${horaFim.hour.toString().padLeft(2, '0')}:${horaFim.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15),
-                                      ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // DIA INTEIRO
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time,
+                                  size: 18, color: Colors.black54),
+                              const SizedBox(width: 8),
+                              const Text('Dia inteiro',
+                                  style: TextStyle(fontSize: 14)),
+                              Switch(
+                                value: diaInteiro,
+                                onChanged: (val) =>
+                                    setModalState(() => diaInteiro = val),
+                                activeColor: const Color(0xFFF7941D),
+                              ),
+                              const Spacer(),
+                              if (!diaInteiro) ...[
+                                GestureDetector(
+                                  onTap: () async {
+                                    final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: horaInicio);
+                                    if (picked != null)
+                                      setModalState(() => horaInicio = picked);
+                                  },
+                                  child: Text(
+                                    '${horaInicio.hour.toString().padLeft(2, '0')}:${horaInicio.minute.toString().padLeft(2, '0')}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15),
+                                  ),
+                                ),
+                                const Padding(
+                                  padding:
+                                  EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(' - ',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: horaFim);
+                                    if (picked != null)
+                                      setModalState(() => horaFim = picked);
+                                  },
+                                  child: Text(
+                                    '${horaFim.hour.toString().padLeft(2, '0')}:${horaFim.minute.toString().padLeft(2, '0')}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // DESCRIÇÃO
+                        const Text('Descrição:',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        _buildTextField(descricaoController, '...',
+                            maxLines: 3),
+                        const SizedBox(height: 12),
+
+                        // DIVIDE
+                        _buildDivideRow(divide, divideController,
+                                (val) => setModalState(() => divide = val)),
+                        const SizedBox(height: 12),
+
+                        // NÃO SE REPETE
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 4),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.repeat,
+                                        size: 18, color: Colors.black54),
+                                    const SizedBox(width: 8),
+                                    const Text('Não se repete',
+                                        style: TextStyle(fontSize: 14)),
+                                    const Spacer(),
+                                    Switch(
+                                      value: naoSeRepete,
+                                      onChanged: (val) => setModalState(
+                                              () => naoSeRepete = val),
+                                      activeColor: const Color(0xFFF7941D),
                                     ),
                                   ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text('Descrição:',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14)),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF176),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: TextField(
-                                controller: descricaoController,
-                                maxLines: 3,
-                                decoration: const InputDecoration(
-                                  hintText: '...',
-                                  hintStyle:
-                                  TextStyle(color: Colors.black38),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.all(12),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 4),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.repeat,
-                                            size: 18,
-                                            color: Colors.black54),
-                                        const SizedBox(width: 8),
-                                        const Text('Não se repete',
-                                            style:
-                                            TextStyle(fontSize: 14)),
-                                        const Spacer(),
-                                        Switch(
-                                          value: naoSeRepete,
-                                          onChanged: (val) =>
-                                              setModalState(
-                                                      () => naoSeRepete = val),
-                                          activeColor:
-                                          const Color(0xFFF7941D),
-                                        ),
-                                      ],
-                                    ),
+                              if (naoSeRepete)
+                                Container(
+                                  margin:
+                                  const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF176),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  if (naoSeRepete)
-                                    Container(
-                                      margin: const EdgeInsets.fromLTRB(
-                                          12, 0, 12, 12),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFF176),
-                                        borderRadius:
-                                        BorderRadius.circular(10),
-                                      ),
-                                      child: Column(
-                                        children:
-                                        opcoesRepeticao.map((opcao) {
-                                          final selecionada =
-                                              repeticaoSelecionada == opcao;
-                                          return GestureDetector(
-                                            onTap: () => setModalState(() =>
-                                            repeticaoSelecionada =
-                                                opcao),
-                                            child: Padding(
-                                              padding:
-                                              const EdgeInsets.symmetric(
-                                                  vertical: 8),
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    width: 20,
-                                                    height: 20,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                          color:
-                                                          Colors.black45,
-                                                          width: 2),
-                                                      color: selecionada
-                                                          ? Colors.black87
-                                                          : Colors
-                                                          .transparent,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Text(opcao,
-                                                      style: const TextStyle(
-                                                          fontSize: 14)),
-                                                ],
+                                  child: Column(
+                                    children: opcoesRepeticao.map((op) {
+                                      final sel = repeticao == op;
+                                      return GestureDetector(
+                                        onTap: () => setModalState(
+                                                () => repeticao = op),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 20,
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: Colors.black45,
+                                                      width: 2),
+                                                  color: sel
+                                                      ? Colors.black87
+                                                      : Colors.transparent,
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                              const SizedBox(width: 12),
+                                              Text(op,
+                                                  style: const TextStyle(
+                                                      fontSize: 14)),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (tituloController.text.isEmpty) return;
-                          Navigator.pop(context);
-                          await _criarTarefa(tituloController.text,
-                              descricaoController.text);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF7941D),
-                          minimumSize: const Size(double.infinity, 55),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Salvar',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (tituloController.text.isEmpty) return;
+                      Navigator.pop(context);
+                      await _criarItem(
+                        titulo: tituloController.text,
+                        descricao: descricaoController.text,
+                        isMission: false,
+                        targetCount: divide && divideController.text.isNotEmpty
+                            ? int.tryParse(divideController.text)
+                            : null,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF7941D),
+                      minimumSize: const Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Salvar',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Future<void> _criarTarefa(String titulo, String descricao) async {
-    final date = _selectedDay ?? DateTime.now();
+  // ─── MODAL MISSÃO ────────────────────────────────────────────────
+  void _abrirModalMissao() {
+    final tituloController = TextEditingController();
+    final descricaoController = TextEditingController();
+    final divideController = TextEditingController();
+    bool divide = false;
+    DateTime periodoInicio = _selectedDay ?? DateTime.now();
+    DateTime periodoFim =
+    (_selectedDay ?? DateTime.now()).add(const Duration(days: 30));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.75,
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTextField(tituloController, 'Adicionar um nome'),
+                        const SizedBox(height: 12),
+
+                        // PERÍODO
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_month,
+                                  size: 18, color: Colors.black54),
+                              const SizedBox(width: 8),
+                              const Text('Período',
+                                  style: TextStyle(fontSize: 14)),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: periodoInicio,
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime(2030),
+                                  );
+                                  if (picked != null)
+                                    setModalState(() => periodoInicio = picked);
+                                },
+                                child: Text(
+                                  '${periodoInicio.day.toString().padLeft(2, '0')}/${periodoInicio.month.toString().padLeft(2, '0')}/${periodoInicio.year}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13),
+                                ),
+                              ),
+                              const Padding(
+                                padding:
+                                EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(' - ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                              GestureDetector(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: periodoFim,
+                                    firstDate: periodoInicio,
+                                    lastDate: DateTime(2030),
+                                  );
+                                  if (picked != null)
+                                    setModalState(() => periodoFim = picked);
+                                },
+                                child: Text(
+                                  '${periodoFim.day.toString().padLeft(2, '0')}/${periodoFim.month.toString().padLeft(2, '0')}/${periodoFim.year}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        const Text('Descrição:',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        _buildTextField(descricaoController, '...',
+                            maxLines: 3),
+                        const SizedBox(height: 12),
+
+                        _buildDivideRow(divide, divideController,
+                                (val) => setModalState(() => divide = val)),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (tituloController.text.isEmpty) return;
+                      Navigator.pop(context);
+                      await _criarItem(
+                        titulo: tituloController.text,
+                        descricao: descricaoController.text,
+                        isMission: true,
+                        targetCount: divide && divideController.text.isNotEmpty
+                            ? int.tryParse(divideController.text)
+                            : 1,
+                        dueDate: periodoInicio,
+                        recurrenceEndDate: periodoFim,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF7941D),
+                      minimumSize: const Size(double.infinity, 55),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Salvar',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _criarItem({
+    required String titulo,
+    required String descricao,
+    required bool isMission,
+    int? targetCount,
+    DateTime? dueDate,
+    DateTime? recurrenceEndDate,
+  }) async {
+    final date = dueDate ?? _selectedDay ?? DateTime.now();
     final dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    try {
-      final body = jsonEncode({
-        'title': titulo,
-        'description': descricao,
-        'user_id': UserSession.id,
-        'due_date': dateStr,
-      });
+    String? endDateStr;
+    if (recurrenceEndDate != null) {
+      endDateStr =
+      '${recurrenceEndDate.year}-${recurrenceEndDate.month.toString().padLeft(2, '0')}-${recurrenceEndDate.day.toString().padLeft(2, '0')}';
+    }
 
+    try {
       final response = await http.post(
         Uri.parse('http://localhost:8080/tasks'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',
         },
-        body: body,
+        body: jsonEncode({
+          'title': titulo,
+          'description': descricao,
+          'user_id': UserSession.id,
+          'due_date': dateStr,
+          'is_mission': isMission,
+          'target_count': targetCount ?? 1,
+          if (endDateStr != null) 'recurrence_end_date': endDateStr,
+        }),
       );
-
       if (response.statusCode == 201) {
         await _fetchTasks();
       }
     } catch (e) {
-      print('Erro ao criar tarefa: $e');
+      print('Erro ao criar: $e');
     }
+  }
+
+  // ─── WIDGETS AUXILIARES ──────────────────────────────────────────
+  Widget _buildTextField(TextEditingController controller, String hint,
+      {int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF176),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        textAlign: maxLines == 1 ? TextAlign.center : TextAlign.start,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.black45),
+          border: InputBorder.none,
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivideRow(bool divide, TextEditingController controller,
+      Function(bool) onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          const Text('Divide',
+              style:
+              TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          Switch(
+            value: divide,
+            onChanged: onChanged,
+            activeColor: const Color(0xFFF7941D),
+          ),
+          if (divide)
+            Expanded(
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                  hintText: 'Quantas vezes?',
+                  hintStyle: TextStyle(color: Colors.black38),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -622,13 +987,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           SafeArea(
-            child: LayoutBuilder( // ← substitui SingleChildScrollView direto
+            child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight, // ← garante altura mínima
+                      minHeight: constraints.maxHeight,
                     ),
                     child: Column(
                       children: [
@@ -637,7 +1002,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: FloatingActionButton.small(
-                            onPressed: _abrirModalNovaTarefa,
+                            onPressed: _abrirModalEscolha, // ← atualizado
                             backgroundColor: Colors.white,
                             elevation: 4,
                             child: const Icon(Icons.add, color: Colors.black),
@@ -654,7 +1019,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             'Nenhuma tarefa ainda.\nClique em + para adicionar!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: Colors.black54, fontSize: 16),
+                                color: Colors.black54,
+                                fontSize: 16),
                           ),
                         )
                             : ListView.separated(
@@ -667,7 +1033,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           itemBuilder: (_, index) =>
                               _buildTaskTile(index, screenHeight),
                         ),
-                        const SizedBox(height: 20), // ← reduzido de 100 para 20
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -694,7 +1060,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 10)
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),
@@ -723,10 +1091,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
-            leftChevronIcon:
-            Icon(Icons.chevron_left, color: Color(0xFFF7941D), size: 20),
-            rightChevronIcon:
-            Icon(Icons.chevron_right, color: Color(0xFFF7941D), size: 20),
+            leftChevronIcon: Icon(Icons.chevron_left,
+                color: Color(0xFFF7941D), size: 20),
+            rightChevronIcon: Icon(Icons.chevron_right,
+                color: Color(0xFFF7941D), size: 20),
           ),
           calendarStyle: const CalendarStyle(
             selectedDecoration: BoxDecoration(
@@ -739,7 +1107,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             TextStyle(color: Color(0xFF3D2B1F), fontSize: 13),
             weekendTextStyle:
             TextStyle(color: Color(0xFF3D2B1F), fontSize: 13),
-            outsideTextStyle: TextStyle(color: Colors.grey, fontSize: 13),
+            outsideTextStyle:
+            TextStyle(color: Colors.grey, fontSize: 13),
             cellMargin: EdgeInsets.all(2),
           ),
         ),
@@ -750,9 +1119,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildTaskTile(int index, double screenHeight) {
     final task = tasks[index];
     final concluida = task['concluida'] as bool;
+    final isMission = task['isMission'] as bool;
+    final current = task['currentCount'] as int;
+    final target = task['targetCount'] as int;
+    final temProgresso = target > 1;
 
     return GestureDetector(
-      onTap: () => _completarTarefa(index),
+      onTap: () {
+        if (isMission) {
+          _incrementarMissao(index);
+        } else {
+          _completarTarefa(index);
+        }
+      },
       child: Container(
         padding: EdgeInsets.symmetric(
             horizontal: 15, vertical: screenHeight * 0.018),
@@ -776,7 +1155,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ? const Color(0xFFA2D033)
                     : Colors.transparent,
                 border: Border.all(
-                  color: const Color(0xFFA2D033),
+                  color: concluida
+                      ? const Color(0xFFA2D033)
+                      : const Color(0xFFF7941D),
                   width: 2,
                 ),
               ),
@@ -798,6 +1179,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
             ),
+            if (temProgresso)
+              Text(
+                '$current/$target',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: concluida
+                      ? Colors.grey
+                      : const Color(0xFFF7941D),
+                ),
+              ),
           ],
         ),
       ),

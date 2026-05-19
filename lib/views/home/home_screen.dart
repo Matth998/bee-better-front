@@ -2,6 +2,8 @@ import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:bee_better_flutter/views/splash/flying_bee.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,10 +13,90 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 1. Mostra streak bonus se for primeiro login do dia
+      if (UserSession.firstLoginToday) {
+        UserSession.firstLoginToday = false; // reseta para não mostrar de novo
+        _mostrarStreakBonus();
+        // Pequeno delay para o snackbar aparecer antes do modal
+        await Future.delayed(const Duration(milliseconds: 600));
+      }
+
+      // 2. Mostra modal de humor se ainda não respondeu hoje
+      await _verificarHumor();
+    });
+  }
+
+  // ── Streak bonus ──
+
+  void _mostrarStreakBonus() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.local_fire_department, color: Color(0xFFFFD100)),
+            SizedBox(width: 8),
+            Text(
+              '+5 moedas! Streak do dia! 🔥',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF3D2B1F),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  // ── Humor ──
+
+  Future<void> _verificarHumor() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ultimaData = prefs.getString('ultima_data_humor');
+    final hoje = DateTime.now().toIso8601String().substring(0, 10);
+
+    if (ultimaData != hoje) {
+      _mostrarModalHumor();
+    }
+  }
+
+  Future<void> _mostrarModalHumor() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _HumorModal(
+        onSelected: (humor) async {
+          final prefs = await SharedPreferences.getInstance();
+          final hoje = DateTime.now().toIso8601String().substring(0, 10);
+          await prefs.setString('ultima_data_humor', hoje);
+          await _salvarHumor(humor);
+        },
+      ),
+    );
+  }
+
+  Future<void> _salvarHumor(String humor) async {
+    try {
+      await http.post(
+        Uri.parse(
+            'http://localhost:8080/daily-progress/mood/${UserSession.id}?mood=$humor'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+    } catch (e) {
+      print('Erro ao salvar humor: $e');
+    }
   }
 
   void _navegarEAtualizar(String rota) async {
@@ -31,24 +113,44 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           Container(color: const Color(0xFFCDE7F7)),
-          Image.asset(
-            'assets/images/Fundo_nuvens.png',
-            width: double.infinity,
-            fit: BoxFit.cover,
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/Fundo_nuvens.png',
+              width: double.infinity,
+              height: double.infinity,
+              alignment: Alignment.topCenter,
+              fit: BoxFit.cover,
+            ),
           ),
 
-          ...List.generate(userLevel, (index) => const FlyingBee()),
+          ...List.generate(
+              userLevel, (index) => FlyingBee(key: ValueKey(index))),
+
+          const QueenBee(),
 
           Positioned(
-            top: 45,
+            top: 60,
             right: 20,
             child: _buildCoinCounter(userCoins),
           ),
 
           Positioned(
+            top: 0,
+            left: 0,
+            bottom: 0,
+            child: Image.asset(
+              'assets/images/galho.png',
+              fit: BoxFit.fitHeight,
+            ),
+          ),
+
+          Positioned(
             top: 40,
             left: 20,
-            child: Image.asset('assets/images/colmeia.png', height: 120),
+            child: GestureDetector(
+              onTap: () => _navegarEAtualizar('/cloakroom'),
+              child: Image.asset('assets/images/colmeia.png', height: 120),
+            ),
           ),
 
           DraggableScrollableSheet(
@@ -67,10 +169,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ListView(
                   controller: scrollController,
                   children: [
-                    // ALÇA
                     Center(
                       child: Container(
-                        margin: const EdgeInsets.only(top: 10, bottom: 10),
+                        margin:
+                        const EdgeInsets.only(top: 10, bottom: 10),
                         width: 40,
                         height: 5,
                         decoration: BoxDecoration(
@@ -79,13 +181,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-
-                    // BOTÃO +
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
-                        padding:
-                        const EdgeInsets.only(right: 20, bottom: 10),
+                        padding: const EdgeInsets.only(right: 20, bottom: 10),
                         child: FloatingActionButton.small(
                           onPressed: () {},
                           backgroundColor: Colors.white,
@@ -94,25 +193,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-
-                    // TAREFAS
                     _buildTaskItem(
                       "Metas para hoje",
-                      onTap: () => _navegarEAtualizar('/calendar'),
+                      onTap: () => _navegarEAtualizar('/goals/today'),
                     ),
                     _buildTaskItem(
                       "Metas em andamento",
-                      onTap: () => _navegarEAtualizar('/calendar'),
+                      onTap: () => _navegarEAtualizar('/goals/in-progress'),
                     ),
                     _buildTaskItem(
                       "Metas concluídas",
-                      onTap: () => _navegarEAtualizar('/calendar'),
+                      onTap: () => _navegarEAtualizar('/goals/completed'),
                     ),
                     _buildTaskItem(
                       "Missões",
-                      onTap: () {}, // futuro
+                      onTap: () => _navegarEAtualizar('/goals/missions'),
                     ),
-
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -127,41 +223,59 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 0) _navegarEAtualizar('/alarms');
           if (index == 1) _navegarEAtualizar('/calendar');
           if (index == 3) _navegarEAtualizar('/featuresScreen');
-          if (index == 5) Navigator.pushNamed(context, '/menu');
+          if (index == 5) _navegarEAtualizar('/menu');
         },
       ),
     );
   }
 
   Widget _buildCoinCounter(int coins) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF8B5A2B),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(left: 15),
+          padding: const EdgeInsets.fromLTRB(25, 6, 12, 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B5A2B),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            coins.toString(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                coins.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.circle, color: Color(0xFFFFD100), size: 18),
+            ],
+          ),
+        ),
+        Positioned(
+          left: -50,
+          top: -35,
+          child: GestureDetector(
+            onTap: () => _mostrarModalHumor(),
+            child: Image.asset(
+              'assets/images/solzinho_humor.png',
+              height: 100,
+              width: 100,
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.circle, color: Color(0xFFFFD100), size: 18),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -192,6 +306,108 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Icon(Icons.chevron_right, color: Colors.black),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── MODAL DE HUMOR ──
+class _HumorModal extends StatelessWidget {
+  final Function(String) onSelected;
+
+  const _HumorModal({required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final humores = [
+      {
+        'label': 'Péssimo',
+        'image': 'assets/images/pessimo.png',
+        'value': 'NEGATIVE'
+      },
+      {
+        'label': 'Ruim',
+        'image': 'assets/images/ruim.png',
+        'value': 'NEGATIVE'
+      },
+      {
+        'label': 'Neutro',
+        'image': 'assets/images/neutro.png',
+        'value': 'NEUTRAL'
+      },
+      {
+        'label': 'Bom',
+        'image': 'assets/images/bom.png',
+        'value': 'POSITIVE'
+      },
+      {
+        'label': 'Ótimo',
+        'image': 'assets/images/otimo.png',
+        'value': 'POSITIVE'
+      },
+    ];
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF9C4),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 16),
+                ),
+              ),
+            ),
+            const Text(
+              'Como está seu humor?',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: humores.map((humor) {
+                return GestureDetector(
+                  onTap: () {
+                    onSelected(humor['value']!);
+                    Navigator.pop(context);
+                  },
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        humor['image']!,
+                        width: 44,
+                        height: 44,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        humor['label']!,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

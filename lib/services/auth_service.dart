@@ -23,13 +23,15 @@ class AuthService {
         nome: user['name'] ?? '',
         email: user['email'] ?? '',
         birthDate: user['birth_date'] ?? '',
-        fotoPerfil: user['profile_picture_url'] != null
-            ? '$baseUrl${user['profile_picture_url']}'
+        fotoPerfil: user['profilePictureUrl'] != null
+            ? '$baseUrl${user['profilePictureUrl']}'
             : '',
-        nivel: user['mascot_level'] ?? 1,       // ← atualizado
+        nivel: user['mascot_level'] ?? 1,
         moedas: user['coins'] ?? 0,
-        experiencia: user['mascot_experience'] ?? 0, // ← adicionado
+        experiencia: user['mascot_experience'] ?? 0,
       );
+
+      await _registrarDailyLogin();
     } else {
       throw Exception('Usuário ou senha inválidos');
     }
@@ -57,15 +59,37 @@ class AuthService {
         nome: user['name'] ?? '',
         email: user['email'] ?? '',
         birthDate: user['birth_date'] ?? '',
-        fotoPerfil: user['profile_picture_url'] != null
-            ? '$baseUrl${user['profile_picture_url']}'
+        fotoPerfil: user['profilePictureUrl'] != null
+            ? '$baseUrl${user['profilePictureUrl']}'
             : '',
-        nivel: user['mascot_level'] ?? 1,       // ← atualizado
+        nivel: user['mascot_level'] ?? 1,
         moedas: user['coins'] ?? 0,
-        experiencia: user['mascot_experience'] ?? 0, // ← adicionado
+        experiencia: user['mascot_experience'] ?? 0,
       );
+
+      await _registrarDailyLogin();
     } else {
       throw Exception('Erro ao criar conta. Tente novamente.');
+    }
+  }
+
+  // DAILY LOGIN — registra streak e atualiza moedas
+  static Future<void> _registrarDailyLogin() async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/${UserSession.id}/daily-login'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // backend retorna camelCase: firstLoginToday
+        final firstLogin = data['firstLoginToday'] ?? false;
+        UserSession.moedas = data['coins'] ?? UserSession.moedas;
+        UserSession.firstLoginToday = firstLogin;
+      }
+    } catch (e) {
+      print('Erro ao registrar daily login: $e');
     }
   }
 }

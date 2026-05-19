@@ -191,7 +191,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             question: "Você tem TDAH?",
             subtitle: "Isso nos ajuda a melhorar a sua experiência",
             options: [
-              "Sim, laudado",
+              "Sim, com laudo",
               "Sim, sem laudo",
               "Acredito que sim",
               "Não",

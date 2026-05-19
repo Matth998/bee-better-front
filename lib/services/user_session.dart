@@ -13,6 +13,7 @@ class UserSession {
   static int nivel = 1;
   static int moedas = 0;
   static int experiencia = 0;
+  static bool firstLoginToday = false;
 
   // Salva os dados após login
   static void salvarSessao({

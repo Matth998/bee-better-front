@@ -1,5 +1,8 @@
+import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AlarmsScreen extends StatefulWidget {
   const AlarmsScreen({super.key});
@@ -9,13 +12,108 @@ class AlarmsScreen extends StatefulWidget {
 }
 
 class _AlarmsScreenState extends State<AlarmsScreen> {
-  final List<Map<String, dynamic>> alarms = [
-    {'nome': '', 'hora': '05 : 30', 'ativo': true},
-    {'nome': '', 'hora': '06 : 00', 'ativo': true},
-    {'nome': 'Almoço', 'hora': '12 : 00', 'ativo': false},
-    {'nome': '', 'hora': '13 : 00', 'ativo': false},
-    {'nome': 'Tomar ba...', 'hora': '18 : 00', 'ativo': true},
-  ];
+  List<Map<String, dynamic>> alarms = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAlarms();
+  }
+
+  Future<void> _fetchAlarms() async {
+    setState(() => loading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8080/alarms/user/${UserSession.id}'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        setState(() {
+          alarms = data
+              .map(
+                (a) => {
+                  'id': a['id'],
+                  'nome': a['label'] ?? '',
+                  'hora': _formatTime(a['time']),
+                  'ativo': a['active'],
+                  'toque': a['ringtone'] ?? 'Toque padrão',
+                },
+              )
+              .toList();
+        });
+      }
+    } catch (e) {
+      print('Erro ao buscar alarmes: $e');
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  String _formatTime(String? time) {
+    if (time == null) return '00 : 00';
+    final parts = time.split(':');
+    return '${parts[0].padLeft(2, '0')} : ${parts[1].padLeft(2, '0')}';
+  }
+
+  Future<void> _criarAlarme(
+    int hora,
+    int minuto,
+    String nome,
+    String toque,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/alarms/user/${UserSession.id}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${UserSession.token}',
+        },
+        body: jsonEncode({
+          'time':
+              '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}:00',
+          'label': nome,
+          'ringtone': toque,
+        }),
+      );
+      if (response.statusCode == 201) {
+        await _fetchAlarms();
+      }
+    } catch (e) {
+      print('Erro ao criar alarme: $e');
+    }
+  }
+
+  Future<void> _toggleAlarme(int index) async {
+    final alarm = alarms[index];
+    try {
+      final response = await http.patch(
+        Uri.parse('http://localhost:8080/alarms/${alarm['id']}/toggle'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+      if (response.statusCode == 200) {
+        setState(() => alarms[index]['ativo'] = !alarms[index]['ativo']);
+      }
+    } catch (e) {
+      print('Erro ao toggle alarme: $e');
+    }
+  }
+
+  Future<void> _deletarAlarme(int index) async {
+    final alarm = alarms[index];
+    try {
+      final response = await http.delete(
+        Uri.parse('http://localhost:8080/alarms/${alarm['id']}'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+      if (response.statusCode == 204) {
+        setState(() => alarms.removeAt(index));
+      }
+    } catch (e) {
+      print('Erro ao deletar alarme: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,18 +121,16 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // FUNDO DA COLMEIA
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/fundo_colmeia.png',
+      backgroundColor: Colors.transparent,
+      body: SizedBox.expand(
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/fundo_colmeia.png'),
               fit: BoxFit.cover,
             ),
           ),
-
-          // CONTEÚDO
-          SafeArea(
+          child: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: screenWidth * 0.05,
@@ -51,20 +147,43 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                         onPressed: _abrirModalNovoAlarme,
                         backgroundColor: Colors.white,
                         elevation: 4,
-                        child: const Icon(Icons.add, color: Colors.black, size: 24),
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.black,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
 
-                  // LISTA DE ALARMES
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: alarms.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, index) =>
-                        _buildAlarmItem(alarms[index], screenHeight),
-                  ),
+                  // LISTA OU VAZIO
+                  loading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFF7941D),
+                          ),
+                        )
+                      : alarms.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            'Nenhum alarme ainda.\nClique em + para adicionar!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 16,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: alarms.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (_, index) =>
+                              _buildAlarmItem(index, screenHeight),
+                        ),
 
                   SizedBox(height: screenHeight * 0.03),
 
@@ -73,6 +192,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                     height: screenHeight * 0.20,
                     width: double.infinity,
                     decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       boxShadow: [
                         BoxShadow(
@@ -81,102 +201,151 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                           offset: const Offset(0, 5),
                         ),
                       ],
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/mel_escorrendo.png'),
-                        fit: BoxFit.fill,
-                      ),
                     ),
-                    child: Center(
-                      child: Icon(
-                        Icons.watch_later_outlined,
-                        size: screenHeight * 0.08,
-                        color: const Color(0xFF63450E),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Image.asset(
+                              'assets/images/mel_escorrendo.png',
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, '/pomodoro'),
+                            child: Center(
+                              child: Icon(
+                                Icons.watch_later_outlined,
+                                size: screenHeight * 0.08,
+                                color: const Color(0xFF63450E),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
-      // bottomNavigationBar: CustomBottomNav(
-      //   currentIndex: 0,
-      //   onTap: (index) {
-      //     if (index == 4) Navigator.pushNamed(context, '/home');
-      //     if (index == 1) Navigator.pushNamed(context, '/calendar');
-      //     if (index == 3) Navigator.pushNamed(context, '/featuresScreen');
-      //     // if (index == 5) Navigator.pushNamed(context, '/menu');
-      //   },
-      // ),
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 4) Navigator.pushNamed(context, '/home');
+          if (index == 1) Navigator.pushNamed(context, '/calendar');
+          if (index == 3) Navigator.pushNamed(context, '/featuresScreen');
+          if (index == 5) Navigator.pushNamed(context, '/menu');
+        },
+      ),
     );
   }
 
-  Widget _buildAlarmItem(Map<String, dynamic> alarm, double screenHeight) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: screenHeight * 0.015,
+  Widget _buildAlarmItem(int index, double screenHeight) {
+    final alarm = alarms[index];
+    return Dismissible(
+      key: Key(alarm['id'].toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 28),
       ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // NOME DO ALARME
-          SizedBox(
-            width: 70,
-            child: Text(
-              alarm['nome'] ?? '',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text(
+                  'Excluir alarme',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                content: const Text('Deseja excluir este alarme?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text(
+                      'Excluir',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
-              overflow: TextOverflow.ellipsis,
+            ) ??
+            false;
+      },
+      onDismissed: (_) => _deletarAlarme(index),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: screenHeight * 0.015,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 5,
+              offset: const Offset(0, 3),
             ),
-          ),
-
-          // HORÁRIO CENTRALIZADO
-          Expanded(
-            child: Center(
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 70,
               child: Text(
-                alarm['hora'],
-                style: TextStyle(
-                  fontSize: screenHeight * 0.035,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                alarm['nome'] ?? '',
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  alarm['hora'],
+                  style: TextStyle(
+                    fontSize: screenHeight * 0.035,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
               ),
             ),
-          ),
-
-          // TOGGLE
-          SizedBox(
-            width: 70,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Switch(
-                value: alarm['ativo'],
-                onChanged: (val) {
-                  setState(() => alarm['ativo'] = val);
-                },
-                activeColor: const Color(0xFFF7941D),
-                inactiveThumbColor: Colors.black45,
-                inactiveTrackColor: Colors.black12,
+            SizedBox(
+              width: 70,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Switch(
+                  value: alarm['ativo'],
+                  onChanged: (_) => _toggleAlarme(index),
+                  activeColor: const Color(0xFFF7941D),
+                  inactiveThumbColor: Colors.black45,
+                  inactiveTrackColor: Colors.black12,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -185,11 +354,14 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     int selectedHour = TimeOfDay.now().hour;
     int selectedMinute = TimeOfDay.now().minute;
     String nomeSelecionado = '';
+    String toqueSelecionado = 'Toque padrão';
 
-    final FixedExtentScrollController horaController =
-    FixedExtentScrollController(initialItem: selectedHour);
-    final FixedExtentScrollController minutoController =
-    FixedExtentScrollController(initialItem: selectedMinute);
+    final horaController = FixedExtentScrollController(
+      initialItem: selectedHour,
+    );
+    final minutoController = FixedExtentScrollController(
+      initialItem: selectedMinute,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -206,7 +378,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
               ),
               child: Column(
                 children: [
-                  // HANDLE
                   Container(
                     margin: const EdgeInsets.only(top: 12),
                     width: 40,
@@ -216,26 +387,19 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   const Text(
                     "Novo Alarme",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 20),
 
-                  // SELETOR DE HORA ESTILO iOS
+                  // SELETOR DE HORA
                   SizedBox(
                     height: 200,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // HORAS
                         SizedBox(
                           width: 80,
                           child: ListWheelScrollView.useDelegate(
@@ -244,22 +408,21 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             perspective: 0.005,
                             diameterRatio: 1.5,
                             physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              setModalState(() => selectedHour = index);
-                            },
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => selectedHour = i),
                             childDelegate: ListWheelChildBuilderDelegate(
                               childCount: 24,
-                              builder: (context, index) {
-                                final isSelected = index == selectedHour;
+                              builder: (_, i) {
+                                final sel = i == selectedHour;
                                 return Center(
                                   child: Text(
-                                    index.toString().padLeft(2, '0'),
+                                    i.toString().padLeft(2, '0'),
                                     style: TextStyle(
-                                      fontSize: isSelected ? 36 : 24,
-                                      fontWeight: isSelected
+                                      fontSize: sel ? 36 : 24,
+                                      fontWeight: sel
                                           ? FontWeight.bold
                                           : FontWeight.normal,
-                                      color: isSelected
+                                      color: sel
                                           ? Colors.black
                                           : Colors.grey.shade400,
                                     ),
@@ -269,8 +432,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             ),
                           ),
                         ),
-
-                        // SEPARADOR
                         const Text(
                           ":",
                           style: TextStyle(
@@ -278,8 +439,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
-                        // MINUTOS
                         SizedBox(
                           width: 80,
                           child: ListWheelScrollView.useDelegate(
@@ -288,22 +447,21 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             perspective: 0.005,
                             diameterRatio: 1.5,
                             physics: const FixedExtentScrollPhysics(),
-                            onSelectedItemChanged: (index) {
-                              setModalState(() => selectedMinute = index);
-                            },
+                            onSelectedItemChanged: (i) =>
+                                setModalState(() => selectedMinute = i),
                             childDelegate: ListWheelChildBuilderDelegate(
                               childCount: 60,
-                              builder: (context, index) {
-                                final isSelected = index == selectedMinute;
+                              builder: (_, i) {
+                                final sel = i == selectedMinute;
                                 return Center(
                                   child: Text(
-                                    index.toString().padLeft(2, '0'),
+                                    i.toString().padLeft(2, '0'),
                                     style: TextStyle(
-                                      fontSize: isSelected ? 36 : 24,
-                                      fontWeight: isSelected
+                                      fontSize: sel ? 36 : 24,
+                                      fontWeight: sel
                                           ? FontWeight.bold
                                           : FontWeight.normal,
-                                      color: isSelected
+                                      color: sel
                                           ? Colors.black
                                           : Colors.grey.shade400,
                                     ),
@@ -346,12 +504,12 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                                 hintText: "Inserir nome",
                                 hintStyle: TextStyle(color: Colors.black38),
                                 border: InputBorder.none,
-                                contentPadding:
-                                EdgeInsets.symmetric(horizontal: 16),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                               ),
-                              onChanged: (val) {
-                                setModalState(() => nomeSelecionado = val);
-                              },
+                              onChanged: (val) =>
+                                  setModalState(() => nomeSelecionado = val),
                             ),
                           ),
                         ],
@@ -364,42 +522,54 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                   // CAMPO TOQUE
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF9E6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
-                            child: Text(
-                              "Toque",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final toque = await _abrirModalToque(context);
+                        if (toque != null) {
+                          setModalState(() => toqueSelecionado = toque);
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF9E6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
+                              child: Text(
+                                "Toque",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Row(
-                              children: [
-                                Text(
-                                  "Toque padrão",
-                                  style: TextStyle(
-                                    fontSize: 14,
+                            Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    toqueSelecionado,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right,
                                     color: Colors.grey.shade500,
                                   ),
-                                ),
-                                Icon(Icons.chevron_right,
-                                    color: Colors.grey.shade500),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -411,16 +581,13 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                     padding: const EdgeInsets.fromLTRB(30, 0, 30, 30),
                     child: ElevatedButton(
                       onPressed: () {
-                        final hora =
-                            '${selectedHour.toString().padLeft(2, '0')} : ${selectedMinute.toString().padLeft(2, '0')}';
-                        setState(() {
-                          alarms.add({
-                            'nome': nomeSelecionado,
-                            'hora': hora,
-                            'ativo': true,
-                          });
-                        });
                         Navigator.pop(context);
+                        _criarAlarme(
+                          selectedHour,
+                          selectedMinute,
+                          nomeSelecionado,
+                          toqueSelecionado,
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF7941D),
@@ -448,4 +615,140 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     );
   }
 
+  Future<String?> _abrirModalToque(BuildContext context) async {
+    final toques = [
+      'Toque padrão',
+      'Toque 1',
+      'Toque 2',
+      'Toque 3',
+      'Toque 4',
+      'Toque 5',
+      'Toque 6',
+      'Toque 7',
+    ];
+
+    String? toqueSelecionado;
+
+    return await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Toque do alarme",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: toqueSelecionado != null
+                              ? () => Navigator.pop(context, toqueSelecionado)
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF7941D),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            "Selecionar",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: toques.length,
+                      itemBuilder: (_, index) {
+                        final toque = toques[index];
+                        final isSelected = toque == toqueSelecionado;
+
+                        return GestureDetector(
+                          onTap: () =>
+                              setModalState(() => toqueSelecionado = toque),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFFFF9E6)
+                                  : const Color(0xFFFFFDE7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: isSelected
+                                  ? Border.all(
+                                      color: const Color(0xFFF7941D),
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  toque,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? const Color(0xFFF7941D)
+                                        : Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  '.....',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

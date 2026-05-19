@@ -16,6 +16,7 @@ class _ShopScreenState extends State<ShopScreen> {
     'Estava me perguntando quando você viria visitar minha loja!',
     'Eu sabia que você gostaria de mudar um pouco!',
     'Acho que tenho exatamente o que você precisa!',
+    'Quando o mel é bom, a abelha sempre volta!'
   ];
 
   late String fraseAtual;

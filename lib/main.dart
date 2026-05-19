@@ -1,19 +1,23 @@
 import 'package:bee_better_flutter/views/breathing/breathing_screen.dart';
 import 'package:bee_better_flutter/views/auth/login.dart';
+import 'package:bee_better_flutter/views/cloakroom/cloakroom_screen.dart';
 import 'package:bee_better_flutter/views/dashboard/dashboard_screen.dart';
-import 'package:bee_better_flutter/views/home/AlarmsScreen.dart';
-import 'package:bee_better_flutter/views/home/CalendarScreen.dart';
-import 'package:bee_better_flutter/views/home/FeaturesScreen.dart';
-import 'package:bee_better_flutter/views/home/ProfileProgressScreen.dart';
+import 'package:bee_better_flutter/views/home/alarms_screen.dart';
+import 'package:bee_better_flutter/views/home/calendar_screen.dart';
+import 'package:bee_better_flutter/views/home/features_screen.dart';
+import 'package:bee_better_flutter/views/home/profile_progress_screen.dart';
 import 'package:bee_better_flutter/views/home/home_screen.dart';
 import 'package:bee_better_flutter/views/notes/note_screen.dart';
 import 'package:bee_better_flutter/views/onboarding/onboarding_flow.dart';
 import 'package:bee_better_flutter/views/onboarding/registerScreen.dart';
+import 'package:bee_better_flutter/views/pomodoro/pomodoro_screen.dart';
+import 'package:bee_better_flutter/views/pomodoro/pomodoro_settings_screen.dart';
 import 'package:bee_better_flutter/views/settings/settings_screen.dart';
-import 'package:bee_better_flutter/views/shop/ShopScreen.dart';
+import 'package:bee_better_flutter/views/shop/shop_screen.dart';
 import 'package:bee_better_flutter/views/splash/splash_onboarding.dart';
 import 'package:bee_better_flutter/views/splash/splash_pos_onboarding.dart';
 import 'package:bee_better_flutter/views/splash/splash_screen.dart';
+import 'package:bee_better_flutter/views/goals/goals_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -59,6 +63,13 @@ class MyApp extends StatelessWidget {
         '/breathing': (context) => const BreathingScreen(),
         '/shop': (context) => const ShopScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/goals/today': (context) => const GoalsScreen(type: GoalScreenType.today),
+        '/goals/in-progress': (context) => const GoalsScreen(type: GoalScreenType.inProgress),
+        '/goals/completed': (context) => const GoalsScreen(type: GoalScreenType.completed),
+        '/goals/missions': (context) => const GoalsScreen(type: GoalScreenType.missions),
+        '/pomodoro': (context) => const PomodoroScreen(),
+        '/pomodoroSettings': (context) => const PomodoroSettingsScreen(),
+        '/cloakroom': (context) => const CloakroomScreen(),
       },
     );
   }

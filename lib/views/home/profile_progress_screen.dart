@@ -19,18 +19,89 @@ class ProfileProgressScreen extends StatefulWidget {
 }
 
 class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
+  final ImagePicker _picker = ImagePicker();
 
-  final ImagePicker _picker = ImagePicker(); // ← adicionado
+  DateTime _mesAtual = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  Set<String> _diasComLogin = {};
+  bool _loadingStreak = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchStreak();
   }
 
-  // Todos os métodos de foto adicionados aqui
+  Future<void> _fetchStreak() async {
+    setState(() => _loadingStreak = true);
+    try {
+      final start = _mesAtual;
+      final end = DateTime(_mesAtual.year, _mesAtual.month + 1, 0);
+      final startStr =
+          '${start.year}-${start.month.toString().padLeft(2, '0')}-01';
+      final endStr =
+          '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
+
+      final response = await http.get(
+        Uri.parse(
+            'http://localhost:8080/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        setState(() {
+          _diasComLogin = data.map((d) {
+            final date = d['date'];
+            if (date is List) {
+              final year = date[0];
+              final month = date[1].toString().padLeft(2, '0');
+              final day = date[2].toString().padLeft(2, '0');
+              return '$year-$month-$day';
+            }
+            return date.toString();
+          }).toSet();
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar streak: $e');
+    } finally {
+      setState(() => _loadingStreak = false);
+    }
+  }
+
+  String _nomeMes(int mes) {
+    const nomes = [
+      '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return nomes[mes];
+  }
+
+  bool _tevLogin(int dia) {
+    final dateStr =
+        '${_mesAtual.year}-${_mesAtual.month.toString().padLeft(2, '0')}-${dia.toString().padLeft(2, '0')}';
+    return _diasComLogin.contains(dateStr);
+  }
+
+  List<int> _getDiasExibidos() {
+    final hoje = DateTime.now();
+    final diasNoMes =
+        DateTime(_mesAtual.year, _mesAtual.month + 1, 0).day;
+    final diaBase = (_mesAtual.year == hoje.year &&
+        _mesAtual.month == hoje.month)
+        ? hoje.day
+        : diasNoMes ~/ 2;
+
+    final dias = <int>[];
+    for (int i = -3; i <= 3; i++) {
+      final dia = diaBase + i;
+      if (dia >= 1 && dia <= diasNoMes) dias.add(dia);
+    }
+    return dias;
+  }
+
   Future<void> _onProfilePictureTap() async {
     final hasFoto = UserSession.fotoPerfil.isNotEmpty;
-
     if (hasFoto) {
       showModalBottomSheet(
         context: context,
@@ -79,18 +150,12 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
   }
 
   Future<void> _escolherFoto() async {
-    print('Abrindo galeria...');
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
       maxWidth: 800,
     );
-    print('Imagem selecionada: ${image?.path}');
-    if (image == null) {
-      print('Nenhuma imagem selecionada');
-      return;
-    }
-    print('Chamando upload...');
+    if (image == null) return;
     await _uploadFoto(File(image.path));
   }
 
@@ -98,22 +163,25 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:8080/users/${UserSession.id}/profile-picture'),
+        Uri.parse(
+            'http://localhost:8080/users/${UserSession.id}/profile-picture'),
       );
       request.headers['Authorization'] = 'Bearer ${UserSession.token}';
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
 
       final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse); // ← converte aqui
+      final response = await http.Response.fromStream(streamedResponse);
+      debugPrint('Upload response: ${response.body}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final json = jsonDecode(response.body);
+        debugPrint('campos: ${json.keys}');
         setState(() {
           UserSession.fotoPerfil = 'http://localhost:8080${json['profilePictureUrl']}';
         });
       }
     } catch (e) {
-      print('Erro ao fazer upload: $e');
+      debugPrint('Erro ao fazer upload: $e');
     }
   }
 
@@ -134,22 +202,29 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints:
+                    BoxConstraints(minHeight: constraints.maxHeight),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildProfileCard(),
+                          const SizedBox(height: 20),
                           _buildProgressStrip(),
+                          const SizedBox(height: 20),
                           Row(
                             children: [
                               _buildActionCardWrapper(
-                                onTap: () => Navigator.pushNamed(context, '/shop'),
+                                onTap: () =>
+                                    Navigator.pushNamed(context, '/shop'),
                                 gradient: const LinearGradient(
                                   begin: Alignment(-1.0, -1.0),
                                   end: Alignment(1.0, 1.0),
-                                  colors: [Color(0xFFFFF4C2), Color(0xFFF5A623)],
+                                  colors: [
+                                    Color(0xFFFFF4C2),
+                                    Color(0xFFF5A623)
+                                  ],
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -163,13 +238,15 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
-                                    Image.asset('assets/images/colmeia.png', height: 60),
+                                    Image.asset('assets/images/colmeia.png',
+                                        height: 60),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 15),
                               _buildActionCardWrapper(
-                                onTap: () => Navigator.pushNamed(context, '/settings'),
+                                onTap: () => Navigator.pushNamed(
+                                    context, '/settings'),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -191,6 +268,10 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 15),
+
+                          // CARD VESTIÁRIO
+                          _buildVestiarioCard(),
                         ],
                       ),
                     ),
@@ -213,6 +294,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
     );
   }
 
+  // ── Profile card com XP e Nível ──
   Widget _buildProfileCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -220,12 +302,12 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
         color: beeBetterYellow,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
+          BoxShadow(
+              color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
         ],
       ),
       child: Row(
         children: [
-          // ← GestureDetector na foto
           GestureDetector(
             onTap: _onProfilePictureTap,
             child: Container(
@@ -234,11 +316,13 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFD4AF37), width: 3),
+                border:
+                Border.all(color: const Color(0xFFD4AF37), width: 3),
                 image: DecorationImage(
                   image: UserSession.fotoPerfil.isNotEmpty
                       ? NetworkImage(UserSession.fotoPerfil)
-                      : const AssetImage('assets/images/abelha_login.png'),
+                      : const AssetImage('assets/images/abelha_login.png')
+                  as ImageProvider,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -249,8 +333,41 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
             child: Column(
               children: [
                 _buildInfoField(Icons.person, UserSession.nome),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _buildInfoField(Icons.cake, UserSession.dataNascimento),
+                const SizedBox(height: 8),
+                // XP e Nível
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.black54, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Nível ${UserSession.nivel}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${UserSession.experiencia} xp',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: beeBetterOrange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -270,13 +387,26 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
         children: [
           Icon(icon, color: Colors.black54, size: 20),
           const SizedBox(width: 10),
-          Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
   }
 
+  // ── Streak strip ──
   Widget _buildProgressStrip() {
+    final diasExibidos = _getDiasExibidos();
+    final hoje = DateTime.now();
+    final esMesAtual =
+        _mesAtual.year == hoje.year && _mesAtual.month == hoje.month;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
       decoration: BoxDecoration(
@@ -285,61 +415,188 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4EAC8),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Text(
-              'Novembro 2025',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: beeBetterBrown),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _mesAtual =
+                        DateTime(_mesAtual.year, _mesAtual.month - 1, 1);
+                  });
+                  _fetchStreak();
+                },
+                child: const Icon(Icons.chevron_left,
+                    color: Color(0xFFC0A68A), size: 20),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 15, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4EAC8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${_nomeMes(_mesAtual.month)} ${_mesAtual.year}',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: beeBetterBrown),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _mesAtual =
+                        DateTime(_mesAtual.year, _mesAtual.month + 1, 1);
+                  });
+                  _fetchStreak();
+                },
+                child: const Icon(Icons.chevron_right,
+                    color: Color(0xFFC0A68A), size: 20),
+              ),
+            ],
           ),
           const SizedBox(height: 15),
-          Row(
+          _loadingStreak
+              ? const SizedBox(
+            height: 45,
+            child: Center(
+              child: CircularProgressIndicator(
+                  color: beeBetterOrange, strokeWidth: 2),
+            ),
+          )
+              : Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              const Icon(Icons.chevron_left, color: Color(0xFFC0A68A), size: 20),
-              _buildDayItem(isFlame: true),
-              _buildDayItem(isFlame: true),
-              _buildDayItem(isFlame: true),
-              _buildDayItem(isCoin: true),
-              _buildDayItem(isDot: true),
-              _buildDayItem(isDot: true),
-              _buildDayItem(isDot: true),
-              const Icon(Icons.chevron_right, color: Color(0xFFC0A68A), size: 20),
-            ],
+            children: diasExibidos.map((dia) {
+              final temLogin = _tevLogin(dia);
+              final eHoje = esMesAtual && dia == hoje.day;
+              return _buildDayItem(
+                dia: dia,
+                isFlame: temLogin,
+                isToday: eHoje,
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDayItem({bool isFlame = false, bool isCoin = false, bool isDot = false}) {
-    Widget content = const SizedBox();
-    Color bgColor = const Color(0xFFFDF5E1);
+  Widget _buildDayItem({
+    required int dia,
+    bool isFlame = false,
+    bool isToday = false,
+  }) {
+    return Column(
+      children: [
+        Text(
+          dia.toString(),
+          style: TextStyle(
+            fontSize: 10,
+            color: isToday ? beeBetterOrange : const Color(0xFFC0A68A),
+            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 35,
+          height: 45,
+          decoration: BoxDecoration(
+            color: isToday
+                ? const Color(0xFFFFE066)
+                : const Color(0xFFFDF5E1),
+            borderRadius: BorderRadius.circular(8),
+            border: isToday
+                ? Border.all(color: beeBetterOrange, width: 1.5)
+                : null,
+          ),
+          child: Center(
+            child: isFlame
+                ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text('+5',
+                    style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: beeBetterOrange)),
+                Icon(Icons.local_fire_department,
+                    color: beeBetterOrange, size: 18),
+              ],
+            )
+                : const Icon(Icons.circle,
+                color: Color(0xFFD4D4D4), size: 10),
+          ),
+        ),
+      ],
+    );
+  }
 
-    if (isFlame) {
-      content = const Icon(Icons.local_fire_department, color: beeBetterOrange, size: 22);
-    } else if (isCoin) {
-      bgColor = const Color(0xFFFFE066);
-      content = Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Text('+5', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: beeBetterBrown)),
-          Icon(Icons.circle, color: beeBetterOrange, size: 14),
-        ],
-      );
-    } else {
-      content = const Icon(Icons.circle, color: Color(0xFFD4D4D4), size: 10);
-    }
-
-    return Container(
-      width: 35,
-      height: 45,
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
-      child: Center(child: content),
+  // ── Card Vestiário ──
+  Widget _buildVestiarioCard() {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/cloakroom'),
+      child: Container(
+        width: double.infinity,
+        height: 100,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, 4)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/images/vestiario.png',
+                fit: BoxFit.cover,
+              ),
+              // Overlay escuro leve para o texto ficar legível
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.black.withOpacity(0.35),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'VESTIÁRIO',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 4,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -350,21 +607,24 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
     VoidCallback? onTap,
   }) {
     return Expanded(
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            height: 160,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
-              ],
-            ),
-            child: Center(child: child),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 160,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, 4)),
+            ],
           ),
-        )
+          child: Center(child: child),
+        ),
+      ),
     );
   }
 }
