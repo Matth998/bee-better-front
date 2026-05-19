@@ -31,7 +31,7 @@ class AuthService {
         experiencia: user['mascot_experience'] ?? 0,
       );
 
-      await _registrarDailyLogin();
+      await registrarDailyLoginPublic();
     } else {
       throw Exception('Usuário ou senha inválidos');
     }
@@ -67,14 +67,14 @@ class AuthService {
         experiencia: user['mascot_experience'] ?? 0,
       );
 
-      await _registrarDailyLogin();
+      await registrarDailyLoginPublic();
     } else {
       throw Exception('Erro ao criar conta. Tente novamente.');
     }
   }
 
   // DAILY LOGIN — registra streak e atualiza moedas
-  static Future<void> _registrarDailyLogin() async {
+  static Future<void> registrarDailyLoginPublic() async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users/${UserSession.id}/daily-login'),
