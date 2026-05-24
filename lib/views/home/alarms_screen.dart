@@ -2,6 +2,7 @@ import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
 
 class AlarmsScreen extends StatefulWidget {
@@ -32,20 +33,18 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         final List data = jsonDecode(response.body);
         setState(() {
           alarms = data
-              .map(
-                (a) => {
-                  'id': a['id'],
-                  'nome': a['label'] ?? '',
-                  'hora': _formatTime(a['time']),
-                  'ativo': a['active'],
-                  'toque': a['ringtone'] ?? 'Toque padrão',
-                },
-              )
+              .map((a) => {
+            'id': a['id'],
+            'nome': a['label'] ?? '',
+            'hora': _formatTime(a['time']),
+            'ativo': a['active'],
+            'toque': a['ringtone'] ?? 'toque_1',
+          })
               .toList();
         });
       }
     } catch (e) {
-      print('Erro ao buscar alarmes: $e');
+      debugPrint('Erro ao buscar alarmes: $e');
     } finally {
       setState(() => loading = false);
     }
@@ -58,11 +57,11 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
   }
 
   Future<void> _criarAlarme(
-    int hora,
-    int minuto,
-    String nome,
-    String toque,
-  ) async {
+      int hora,
+      int minuto,
+      String nome,
+      String toque,
+      ) async {
     try {
       final response = await http.post(
         Uri.parse('http://localhost:8080/alarms/user/${UserSession.id}'),
@@ -72,7 +71,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         },
         body: jsonEncode({
           'time':
-              '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}:00',
+          '${hora.toString().padLeft(2, '0')}:${minuto.toString().padLeft(2, '0')}:00',
           'label': nome,
           'ringtone': toque,
         }),
@@ -81,7 +80,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         await _fetchAlarms();
       }
     } catch (e) {
-      print('Erro ao criar alarme: $e');
+      debugPrint('Erro ao criar alarme: $e');
     }
   }
 
@@ -96,7 +95,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         setState(() => alarms[index]['ativo'] = !alarms[index]['ativo']);
       }
     } catch (e) {
-      print('Erro ao toggle alarme: $e');
+      debugPrint('Erro ao toggle alarme: $e');
     }
   }
 
@@ -111,7 +110,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         setState(() => alarms.removeAt(index));
       }
     } catch (e) {
-      print('Erro ao deletar alarme: $e');
+      debugPrint('Erro ao deletar alarme: $e');
     }
   }
 
@@ -138,7 +137,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
               ),
               child: Column(
                 children: [
-                  // BOTÃO +
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
@@ -155,39 +153,34 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       ),
                     ),
                   ),
-
-                  // LISTA OU VAZIO
                   loading
                       ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFFF7941D),
-                          ),
-                        )
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFF7941D),
+                    ),
+                  )
                       : alarms.isEmpty
                       ? const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text(
-                            'Nenhum alarme ainda.\nClique em + para adicionar!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.black54,
-                              fontSize: 16,
-                            ),
-                          ),
-                        )
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Nenhum alarme ainda.\nClique em + para adicionar!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
                       : ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: alarms.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (_, index) =>
-                              _buildAlarmItem(index, screenHeight),
-                        ),
-
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: alarms.length,
+                    separatorBuilder: (_, __) =>
+                    const SizedBox(height: 12),
+                    itemBuilder: (_, index) =>
+                        _buildAlarmItem(index, screenHeight),
+                  ),
                   SizedBox(height: screenHeight * 0.03),
-
-                  // CARD DE MEL
                   Container(
                     height: screenHeight * 0.20,
                     width: double.infinity,
@@ -213,7 +206,8 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => Navigator.pushNamed(context, '/pomodoro'),
+                            onTap: () =>
+                                Navigator.pushNamed(context, '/pomodoro'),
                             child: Center(
                               child: Icon(
                                 Icons.watch_later_outlined,
@@ -226,7 +220,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
                 ],
               ),
@@ -262,34 +255,34 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
       ),
       confirmDismiss: (_) async {
         return await showDialog<bool>(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text(
-                  'Excluir alarme',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text(
+              'Excluir alarme',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text('Deseja excluir este alarme?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey),
                 ),
-                content: const Text('Deseja excluir este alarme?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    child: const Text(
-                      'Excluir',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
               ),
-            ) ??
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ) ??
             false;
       },
       onDismissed: (_) => _deletarAlarme(index),
@@ -354,7 +347,8 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     int selectedHour = TimeOfDay.now().hour;
     int selectedMinute = TimeOfDay.now().minute;
     String nomeSelecionado = '';
-    String toqueSelecionado = 'Toque padrão';
+    String toqueSelecionado = 'toque_1';
+    String toqueLabel = 'Toque 1';
 
     final horaController = FixedExtentScrollController(
       initialItem: selectedHour,
@@ -393,8 +387,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
-
-                  // SELETOR DE HORA
                   SizedBox(
                     height: 200,
                     child: Row(
@@ -435,9 +427,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                         const Text(
                           ":",
                           style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 36, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(
                           width: 80,
@@ -474,10 +464,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // CAMPO NOME
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: Container(
@@ -492,9 +479,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                             child: Text(
                               "Nome",
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
+                                  fontSize: 16, color: Colors.black87),
                             ),
                           ),
                           Expanded(
@@ -504,9 +489,8 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                                 hintText: "Inserir nome",
                                 hintStyle: TextStyle(color: Colors.black38),
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
+                                contentPadding:
+                                EdgeInsets.symmetric(horizontal: 16),
                               ),
                               onChanged: (val) =>
                                   setModalState(() => nomeSelecionado = val),
@@ -516,17 +500,20 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
-                  // CAMPO TOQUE
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: GestureDetector(
                       onTap: () async {
-                        final toque = await _abrirModalToque(context);
-                        if (toque != null) {
-                          setModalState(() => toqueSelecionado = toque);
+                        final result = await _abrirModalToque(
+                          context,
+                          toqueSelecionado,
+                        );
+                        if (result != null) {
+                          setModalState(() {
+                            toqueSelecionado = result['assetName']!;
+                            toqueLabel = result['label']!;
+                          });
                         }
                       },
                       child: Container(
@@ -539,15 +526,11 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                           children: [
                             const Padding(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
+                                  horizontal: 16, vertical: 16),
                               child: Text(
                                 "Toque",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black87,
-                                ),
+                                    fontSize: 16, color: Colors.black87),
                               ),
                             ),
                             Padding(
@@ -555,16 +538,14 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                               child: Row(
                                 children: [
                                   Text(
-                                    toqueSelecionado,
+                                    toqueLabel,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey.shade500,
                                     ),
                                   ),
-                                  Icon(
-                                    Icons.chevron_right,
-                                    color: Colors.grey.shade500,
-                                  ),
+                                  Icon(Icons.chevron_right,
+                                      color: Colors.grey.shade500),
                                 ],
                               ),
                             ),
@@ -573,10 +554,7 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       ),
                     ),
                   ),
-
                   const Spacer(),
-
-                  // BOTÃO SALVAR
                   Padding(
                     padding: const EdgeInsets.fromLTRB(30, 0, 30, 30),
                     child: ElevatedButton(
@@ -615,21 +593,26 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     );
   }
 
-  Future<String?> _abrirModalToque(BuildContext context) async {
+  Future<Map<String, String>?> _abrirModalToque(
+      BuildContext context,
+      String toqueAtual,
+      ) async {
+    // Mapeamento label → assetName
     final toques = [
-      'Toque padrão',
-      'Toque 1',
-      'Toque 2',
-      'Toque 3',
-      'Toque 4',
-      'Toque 5',
-      'Toque 6',
-      'Toque 7',
+      {'label': 'Toque 1', 'assetName': 'toque_1'},
+      {'label': 'Toque 2', 'assetName': 'toque_2'},
+      {'label': 'Toque 3', 'assetName': 'toque_3'},
+      {'label': 'Toque 4', 'assetName': 'toque_4'},
+      {'label': 'Toque 5', 'assetName': 'toque_5'},
+      {'label': 'Toque 6', 'assetName': 'toque_6'},
+      {'label': 'Toque 7', 'assetName': 'toque_7'},
     ];
 
-    String? toqueSelecionado;
+    final player = AudioPlayer();
+    String? selecionado = toqueAtual;
+    String? tocandoAtual; // qual toque está tocando agora
 
-    return await showModalBottomSheet<String>(
+    return await showModalBottomSheet<Map<String, String>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -662,13 +645,19 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                         const Text(
                           "Toque do alarme",
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         ElevatedButton(
-                          onPressed: toqueSelecionado != null
-                              ? () => Navigator.pop(context, toqueSelecionado)
+                          onPressed: selecionado != null
+                              ? () async {
+                            await player.stop();
+                            final toque = toques.firstWhere(
+                                  (t) => t['assetName'] == selecionado,
+                            );
+                            if (context.mounted) {
+                              Navigator.pop(context, toque);
+                            }
+                          }
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFF7941D),
@@ -691,11 +680,14 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                       itemCount: toques.length,
                       itemBuilder: (_, index) {
                         final toque = toques[index];
-                        final isSelected = toque == toqueSelecionado;
+                        final assetName = toque['assetName']!;
+                        final label = toque['label']!;
+                        final isSelected = assetName == selecionado;
+                        final isTocando = assetName == tocandoAtual;
 
                         return GestureDetector(
                           onTap: () =>
-                              setModalState(() => toqueSelecionado = toque),
+                              setModalState(() => selecionado = assetName),
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.symmetric(
@@ -709,16 +701,14 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: isSelected
                                   ? Border.all(
-                                      color: const Color(0xFFF7941D),
-                                      width: 2,
-                                    )
+                                  color: const Color(0xFFF7941D), width: 2)
                                   : null,
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  toque,
+                                  label,
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: isSelected
@@ -729,11 +719,37 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
                                         : Colors.black87,
                                   ),
                                 ),
-                                Text(
-                                  '.....',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 14,
+                                // Botão play/stop
+                                GestureDetector(
+                                  onTap: () async {
+                                    if (isTocando) {
+                                      await player.stop();
+                                      setModalState(
+                                              () => tocandoAtual = null);
+                                    } else {
+                                      await player.stop();
+                                      await player.play(
+                                        AssetSource('audio/$assetName.mp3'),
+                                      );
+                                      setModalState(
+                                              () => tocandoAtual = assetName);
+                                      // Para automaticamente ao terminar
+                                      player.onPlayerComplete.listen((_) {
+                                        if (mounted) {
+                                          setModalState(
+                                                  () => tocandoAtual = null);
+                                        }
+                                      });
+                                    }
+                                  },
+                                  child: Icon(
+                                    isTocando
+                                        ? Icons.stop_circle_outlined
+                                        : Icons.play_circle_outline,
+                                    color: isSelected
+                                        ? const Color(0xFFF7941D)
+                                        : Colors.grey.shade400,
+                                    size: 28,
                                   ),
                                 ),
                               ],
@@ -749,6 +765,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() => player.dispose());
   }
 }

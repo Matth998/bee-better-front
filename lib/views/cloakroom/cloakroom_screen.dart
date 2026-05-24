@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:bee_better_flutter/services/user_session.dart';
 
 class CloakroomScreen extends StatefulWidget {
   const CloakroomScreen({super.key});
@@ -10,6 +13,7 @@ class CloakroomScreen extends StatefulWidget {
 
 class _CloakroomScreenState extends State<CloakroomScreen>
     with TickerProviderStateMixin {
+
   // ── Animação das asas (frame-by-frame) ──
   late AnimationController _wingController;
   final List<String> _wingFrames = [
@@ -24,10 +28,10 @@ class _CloakroomScreenState extends State<CloakroomScreen>
   late AnimationController _hoverController;
   late Animation<double> _hoverAnimation;
 
-  final List<Map<String, dynamic>> _items = List.generate(
-    8,
-        (i) => {'nome': 'Item ${i + 1}', 'asset': null, 'equipado': false},
-  );
+  // ── Variáveis de Estado para o Back-end ──
+  List<Map<String, dynamic>> _items = [];
+  bool _loading = true;
+  static const String _baseUrl = 'http://localhost:8080';
 
   @override
   void initState() {
@@ -40,7 +44,7 @@ class _CloakroomScreenState extends State<CloakroomScreen>
     );
     _startWingAnimation();
 
-    // Hover: sobe e desce suavemente em loop
+    // Hover
     _hoverController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -49,6 +53,66 @@ class _CloakroomScreenState extends State<CloakroomScreen>
     _hoverAnimation = Tween<double>(begin: -10.0, end: 10.0).animate(
       CurvedAnimation(parent: _hoverController, curve: Curves.easeInOut),
     );
+
+    // Buscar itens do inventário vindo do back-end
+    _fetchInventory();
+  }
+
+  // Busca os itens reais que o usuário comprou
+  Future<void> _fetchInventory() async {
+    setState(() => _loading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/shop/user/${UserSession.id}/items'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        setState(() {
+          _items = data.map((item) => {
+            'id': item['id'], // ID do UserItem para usar no PATCH de equipar
+            'shopItemId': item['shopItemId'],
+            'nome': item['name'],
+            'asset': item['assetName'],
+            'category': item['category'],
+            'equipado': item['equipped'] ?? false,
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar inventário do back-end: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  // Envia a atualização de equipar/desequipar para o Spring Boot
+  Future<void> _toggleEquipItem(Map<String, dynamic> item) async {
+    final int userItemId = item['id'];
+    final bool estadoAtual = item['equipado'];
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/shop/user/${UserSession.id}/equip/$userItemId'),
+        headers: {'Authorization': 'Bearer ${UserSession.token}'},
+      );
+
+      if (response.statusCode == 200) {
+        // Atualiza a lista local para refletir as mudanças do banco
+        _fetchInventory();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(estadoAtual ? '${item['nome']} desequipado!' : '${item['nome']} equipado!'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Erro ao equipar item: $e');
+    }
   }
 
   void _startWingAnimation() {
@@ -75,22 +139,20 @@ class _CloakroomScreenState extends State<CloakroomScreen>
     final size = MediaQuery.of(context).size;
     final corpoWidth = size.width * 0.45;
     final asaWidth = size.width * 0.25;
-
-    // Sombra: posicionada abaixo da abelha
-    // Quando abelha sobe (offset negativo) → sombra menor
-    // Quando abelha desce (offset positivo) → sombra maior
     const shadowBaseWidth = 60.0;
-    const hoverRange = 20.0; // total de variação (10 + 10)
+    const hoverRange = 20.0;
+
+    // Fixamos o grid para renderizar sempre 9 espaços (slots), mantendo seu design limpo
+    const int totalSlots = 9;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // ── FUNDO + ABELHA ──
+          // ── FUNDO + ABELHA (Mantido original) ──
           Positioned.fill(
             child: Stack(
               children: [
-                // Fundo
                 Positioned.fill(
                   child: Image.asset(
                     'assets/images/vestiario_fundo.png',
@@ -98,8 +160,6 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                     alignment: Alignment.topCenter,
                   ),
                 ),
-
-                // Botão voltar
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -112,26 +172,18 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                           color: const Color(0xFFF7941D),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.chevron_left,
-                          color: Colors.white,
-                          size: 26,
-                        ),
+                        child: const Icon(Icons.chevron_left, color: Colors.white, size: 26),
                       ),
                     ),
                   ),
                 ),
-
-                // Abelha + sombra animadas
                 AnimatedBuilder(
                   animation: _hoverAnimation,
                   builder: (context, child) {
-                    final offset = _hoverAnimation.value; // -10 a +10
-                    // Normaliza 0..1 onde 0 = mais alto, 1 = mais baixo
+                    final offset = _hoverAnimation.value;
                     final t = (offset + 10) / hoverRange;
-                    // Sombra: menor quando abelha está em cima, maior quando está embaixo
-                    final shadowScale = 0.6 + (t * 0.4); // 0.6 a 1.0
-                    final shadowOpacity = 0.15 + (t * 0.2); // 0.15 a 0.35
+                    final shadowScale = 0.6 + (t * 0.4);
+                    final shadowOpacity = 0.15 + (t * 0.2);
 
                     return Align(
                       alignment: const Alignment(0, -0.3),
@@ -141,7 +193,6 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // SOMBRA — posição fixa, só escala
                             Positioned(
                               bottom: 0,
                               left: 0,
@@ -161,8 +212,6 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                                 ),
                               ),
                             ),
-
-                            // ABELHA — sobe e desce com offset
                             Positioned(
                               top: 0,
                               left: 0,
@@ -176,7 +225,6 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
-                                        // Asa atrás
                                         Positioned(
                                           top: 0,
                                           left: (corpoWidth - asaWidth) / 2,
@@ -189,7 +237,6 @@ class _CloakroomScreenState extends State<CloakroomScreen>
                                             ),
                                           ),
                                         ),
-                                        // Corpo na frente
                                         Image.asset(
                                           'assets/images/abelha_corpo.png',
                                           width: corpoWidth,
@@ -211,7 +258,7 @@ class _CloakroomScreenState extends State<CloakroomScreen>
             ),
           ),
 
-          // ── SHEET DE ITENS ──
+          // ── SHEET DE ITENS TOTALMENTE INTEGRADO ──
           DraggableScrollableSheet(
             initialChildSize: 0.45,
             minChildSize: 0.15,
@@ -222,48 +269,65 @@ class _CloakroomScreenState extends State<CloakroomScreen>
               return Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                child: Column(
+                // ListView para que toda a área branca seja arrastável
+                child: ListView(
+                  controller: scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 10, bottom: 16),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(2),
+                    // Tracinho cinza de arrastar
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                    Expanded(
-                      child: _items.isEmpty
-                          ? const Center(
+
+                    // Área do Grid ou do Loading
+                    _loading
+                        ? const SizedBox(
+                      height: 200,
+                      child: Center(child: CircularProgressIndicator(color: Color(0xFFF7941D))),
+                    )
+                        : _items.isEmpty
+                        ? const SizedBox(
+                      height: 200,
+                      child: Center(
                         child: Text(
                           'Nenhum item ainda.\nVisite a loja!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.black38,
-                            fontSize: 15,
-                          ),
+                          style: TextStyle(color: Colors.black38, fontSize: 15),
                         ),
-                      )
-                          : GridView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 4,
-                        ),
-                        gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      ),
+                    )
+                        : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      child: GridView.builder(
+                        // shrinkWrap e NeverScrollable evitam que o Grid brigue com o ListView pai
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                           childAspectRatio: 1,
                         ),
-                        itemCount: _items.length,
-                        itemBuilder: (_, index) =>
-                            _buildItemCard(_items[index]),
+                        itemCount: totalSlots,
+                        itemBuilder: (_, index) {
+                          if (index < _items.length) {
+                            return _buildItemCard(_items[index]);
+                          }
+                          return _buildEmptySlot();
+                        },
                       ),
                     ),
                   ],
@@ -276,28 +340,19 @@ class _CloakroomScreenState extends State<CloakroomScreen>
     );
   }
 
+  // Card do Item Comprado vindo da API
   Widget _buildItemCard(Map<String, dynamic> item) {
     final equipado = item['equipado'] as bool;
     final asset = item['asset'] as String?;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          for (final i in _items) {
-            i['equipado'] = false;
-          }
-          item['equipado'] = !equipado;
-        });
-      },
+      onTap: () => _toggleEquipItem(item), // Dispara o PATCH no Spring Boot
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color:
-          equipado ? const Color(0xFFFFF3CD) : const Color(0xFFF5F0E8),
+          color: equipado ? const Color(0xFFFFF3CD) : const Color(0xFFF5F0E8),
           borderRadius: BorderRadius.circular(16),
-          border: equipado
-              ? Border.all(color: const Color(0xFFF7941D), width: 2)
-              : null,
+          border: equipado ? Border.all(color: const Color(0xFFF7941D), width: 2) : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -309,18 +364,30 @@ class _CloakroomScreenState extends State<CloakroomScreen>
         child: Center(
           child: asset != null
               ? Image.asset(
-            asset,
+            'assets/images/shop/$asset.png', // Mapeado dinamicamente para a pasta correspondente
             width: 48,
             height: 48,
             fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(Icons.inventory, color: Colors.black26, size: 32),
           )
-              : Icon(
-            Icons.star_outline,
-            color: equipado
-                ? const Color(0xFFF7941D)
-                : Colors.black12,
-            size: 36,
-          ),
+              : const Icon(Icons.star_outline, color: Colors.black12, size: 36),
+        ),
+      ),
+    );
+  }
+
+  // Slot cinza padrão para preenchimento estético dos espaços não comprados
+  Widget _buildEmptySlot() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F0E8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.star_border_rounded,
+          color: Colors.black12,
+          size: 36,
         ),
       ),
     );
