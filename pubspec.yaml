@@ -1,6 +1,7 @@
 name: bee_better_flutter
 description: "Um app desenvolvido para pessoas com TDAH."
 publish_to: 'none'
+version: 1.0.0+1
 
 environment:
   sdk: ^3.11.4
