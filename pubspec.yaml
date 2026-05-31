@@ -15,6 +15,12 @@ dependencies:
   image_picker: ^1.1.2
   flutter_localizations:
     sdk: flutter
+  permission_handler: ^12.0.1
+  shared_preferences: ^2.5.5
+  audioplayers: ^6.6.0
+  google_sign_in: ^6.2.1
+  app_links: ^6.3.2
+  alarm: ^4.0.3
 
 dev_dependencies:
   flutter_test:
@@ -24,3 +30,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/audio/
+    - assets/images/shop/
