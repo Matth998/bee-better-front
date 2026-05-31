@@ -1,3 +1,3 @@
 class AppConfig {
-  static const String baseUrl = 'http://192.168.15.5:8080';
+  static const String baseUrl = 'https://symphony-shortage-unisexual.ngrok-free.dev';
 }
