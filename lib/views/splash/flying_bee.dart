@@ -207,7 +207,7 @@ class _WorkerBeeWidget extends StatelessWidget {
         children: [
           // 1. Asas (atrás, topo esquerdo)
           Positioned(
-            left: width * 0.19,
+            left: width * 0.40,
             top: height * -0.1,
             width: width * 0.360,
             height: height * 0.706,
@@ -262,7 +262,7 @@ class _QueenBeeWidget extends StatelessWidget {
         children: [
           // 1. Asas (atrás do corpo)
           Positioned(
-            left: width * 0.15,
+            left: width * 0.40,
             top: height * 0.07,
             width: width * 0.390,
             height: height * 0.596,
@@ -286,7 +286,7 @@ class _QueenBeeWidget extends StatelessWidget {
           ),
           // 3. Coroa (no topo)
           Positioned(
-            left: width * 0.55,
+            left: width * 0.73,
             top: height * 0.37,
             width: width * 0.186,
             height: height * 0.170,
