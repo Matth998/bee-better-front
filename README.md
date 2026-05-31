@@ -245,7 +245,7 @@ Além da construção técnica da aplicação, o projeto foi fundamentado em est
 
 - Matheus Silva
 - Julia Espinosa (UX)
-- Rhanye Bevilaqua
+- Rhanye Bevilaqua (UX)
 
 ### Backend
 
