@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/onboarding/onboarding_data.dart';
 import 'package:bee_better_flutter/views/onboarding/onboarding_multi_select.dart';
@@ -22,6 +23,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   // O controlador que manda a página ir para frente
   final PageController _pageController = PageController();
   final OnboardingData _data = OnboardingData(); // Guarda respostas do usuário
+  static const String _baseUrl = AppConfig.baseUrl;
 
   void _nextPage() {
     // Se não for a última página, vai para a próxima
@@ -34,7 +36,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Future<void> _submitOnboarding() async {
     try {
       final response = await http.put(
-        Uri.parse('http://localhost:8080/users/${UserSession.id}'),
+        Uri.parse('$_baseUrl/users/${UserSession.id}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',

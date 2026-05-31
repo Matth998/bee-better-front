@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:bee_better_flutter/views/notes/note_editor_screen.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
@@ -15,6 +16,7 @@ class NotesScreen extends StatefulWidget {
 class _NotesScreenState extends State<NotesScreen> {
   List<Map<String, dynamic>> notes = [];
   bool loading = true;
+  static const String _baseUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -26,7 +28,7 @@ class _NotesScreenState extends State<NotesScreen> {
     setState(() => loading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8080/notes/user/${UserSession.id}'),
+        Uri.parse('$_baseUrl/notes/user/${UserSession.id}'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       if (response.statusCode == 200) {

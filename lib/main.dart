@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/services/AlarmNotificationService.dart';
 import 'package:bee_better_flutter/views/breathing/breathing_screen.dart';
 import 'package:bee_better_flutter/views/auth/login.dart';
 import 'package:bee_better_flutter/views/cloakroom/cloakroom_screen.dart';
@@ -28,7 +29,7 @@ void main() async {
 
   // Inicializa notificações só em Android/iOS
   if (Platform.isAndroid || Platform.isIOS) {
-    // inicialização das notificações aqui
+    await AlarmNotificationService.initialize();
   }
 
   await initializeDateFormatting('pt_BR', null);

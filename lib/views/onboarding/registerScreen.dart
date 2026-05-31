@@ -18,6 +18,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  bool isStrongPassword(String password) {
+    final regex = RegExp(
+      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$',
+    );
+
+    return regex.hasMatch(password);
+  }
+
+  bool isValidEmail(String email) {
+    return RegExp(
+      r'^[\w\-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(email);
+  }
+
+  void showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,23 +117,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _emailController.text.isEmpty ||
                       _passwordController.text.isEmpty ||
                       _confirmPasswordController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Preencha todos os campos.'),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
+                    showError('Preencha todos os campos.');
                     return;
                   }
 
                   // Verifica se as senhas coincidem
                   if (_passwordController.text != _confirmPasswordController.text) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('As senhas não coincidem.'),
-                        backgroundColor: Colors.redAccent,
-                      ),
+                    showError('As senhas não coincidem.');
+                    return;
+                  }
+
+                  if (!isStrongPassword(_passwordController.text)) {
+                    showError(
+                      'A senha deve ter pelo menos 8 caracteres, incluindo letra maiúscula, minúscula, número e caractere especial.',
                     );
+                    return;
+                  }
+
+                  if (!isValidEmail(_emailController.text)) {
+                    showError('Informe um e-mail válido.');
                     return;
                   }
 
@@ -122,12 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Navigator.pushReplacementNamed(context, '/pre_onboarding');
 
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(e.toString()),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
+                    showError(e.toString());
                   }
                 },
                 style: ElevatedButton.styleFrom(

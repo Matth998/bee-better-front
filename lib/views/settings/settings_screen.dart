@@ -1,8 +1,10 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
+import 'package:bee_better_flutter/services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
@@ -40,6 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _horaDescansoFim = 8;
   int _minutoDescansoFim = 0;
 
+  static const String _baseUrl = AppConfig.baseUrl;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +78,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _sairDaConta() async {
+    final confirm = await _showConfirmDialog(
+      'Sair da conta',
+      'Deseja realmente sair da sua conta?',
+    );
+    if (!confirm) return;
+
+    await AuthService.logout();
+
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+    }
+  }
+
   Future<void> _savePreference(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
@@ -103,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           '${_horaDescansoFim.toString().padLeft(2, '0')}:${_minutoDescansoFim.toString().padLeft(2, '0')}:00';
 
       await http.patch(
-        Uri.parse('http://localhost:8080/daily-progress/user/${UserSession.id}/sleep'),
+        Uri.parse('$_baseUrl/daily-progress/user/${UserSession.id}/sleep'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',
@@ -864,6 +882,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   'Restaurar configurações padrão',
                                   color: const Color(0xFFFFD100),
                                   onTap: _restaurarConfiguracoes),
+                              _buildActionTile('Sair da conta',
+                                  color: Colors.redAccent,
+                                  onTap: _sairDaConta),
                             ],
                           ),
                         ),

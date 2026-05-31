@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -17,6 +18,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _saving = false;
   bool _checklistMode = false;
   bool get _isEditing => widget.note != null;
+  static const String _baseUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -61,7 +63,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     try {
       if (_isEditing) {
         await http.put(
-          Uri.parse('http://localhost:8080/notes/${widget.note!['id']}'),
+          Uri.parse('$_baseUrl/notes/${widget.note!['id']}'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ${UserSession.token}',
@@ -74,7 +76,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         );
       } else {
         await http.post(
-          Uri.parse('http://localhost:8080/notes'),
+          Uri.parse('$_baseUrl/notes'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ${UserSession.token}',

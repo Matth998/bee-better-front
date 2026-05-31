@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/auth_service.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _loadingGoogle = false;
 
-  static const String _baseUrl = 'http://localhost:8080';
+  static const String _baseUrl = AppConfig.baseUrl;
 
   // Google Sign In configurado com o client ID Android
   final GoogleSignIn _googleSignIn = GoogleSignIn(

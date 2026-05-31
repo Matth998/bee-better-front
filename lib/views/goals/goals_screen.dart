@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class GoalsScreen extends StatefulWidget {
 class _GoalsScreenState extends State<GoalsScreen> {
   List<Map<String, dynamic>> items = [];
   bool loading = true;
+  static const String _baseUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -35,13 +37,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   String get _endpoint => switch (widget.type) {
     GoalScreenType.today =>
-    'http://localhost:8080/tasks/user/${UserSession.id}/today',
+    '$_baseUrl/tasks/user/${UserSession.id}/today',
     GoalScreenType.inProgress =>
-    'http://localhost:8080/tasks/user/${UserSession.id}/in-progress',
+    '$_baseUrl/tasks/user/${UserSession.id}/in-progress',
     GoalScreenType.completed =>
-    'http://localhost:8080/tasks/user/${UserSession.id}/completed',
+    '$_baseUrl/tasks/user/${UserSession.id}/completed',
     GoalScreenType.missions =>
-    'http://localhost:8080/tasks/user/${UserSession.id}/missions',
+    '$_baseUrl/tasks/user/${UserSession.id}/missions',
   };
 
   Future<void> _fetch() async {
@@ -80,7 +82,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     try {
       final response = await http.patch(
-        Uri.parse('http://localhost:8080/tasks/${item['id']}/complete'),
+        Uri.parse('$_baseUrl/tasks/${item['id']}/complete'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       if (response.statusCode == 200) {
@@ -99,7 +101,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     try {
       final response = await http.patch(
         Uri.parse(
-            'http://localhost:8080/tasks/${item['id']}/progress?increment=1'),
+            '$_baseUrl/tasks/${item['id']}/progress?increment=1'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       if (response.statusCode == 200) {
@@ -571,7 +573,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8080/tasks'),
+        Uri.parse('$_baseUrl/tasks'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',

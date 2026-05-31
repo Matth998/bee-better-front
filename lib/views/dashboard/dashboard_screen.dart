@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> history = [];
   bool loading = true;
+  static const String _baseUrl = AppConfig.baseUrl;
   late List<DateTime> months;
 
   @override
@@ -37,7 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       final response = await http.get(
         Uri.parse(
-            'http://localhost:8080/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
+            '$_baseUrl/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
 

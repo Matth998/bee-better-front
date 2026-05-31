@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class ProfileProgressScreen extends StatefulWidget {
 }
 
 class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
+  static const String _baseUrl = AppConfig.baseUrl;
   final ImagePicker _picker = ImagePicker();
 
   DateTime _mesAtual = DateTime(DateTime.now().year, DateTime.now().month, 1);
@@ -43,7 +45,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
 
       final response = await http.get(
         Uri.parse(
-            'http://localhost:8080/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
+            '$_baseUrl/daily-progress/history/${UserSession.id}?start=$startStr&end=$endStr'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
 
@@ -164,7 +166,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
       final request = http.MultipartRequest(
         'POST',
         Uri.parse(
-            'http://localhost:8080/users/${UserSession.id}/profile-picture'),
+            '$_baseUrl/users/${UserSession.id}/profile-picture'),
       );
       request.headers['Authorization'] = 'Bearer ${UserSession.token}';
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
@@ -177,7 +179,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
         final json = jsonDecode(response.body);
         debugPrint('campos: ${json.keys}');
         setState(() {
-          UserSession.fotoPerfil = 'http://localhost:8080${json['profilePictureUrl']}';
+          UserSession.fotoPerfil = '$_baseUrl${json['profilePictureUrl']}';
         });
       }
     } catch (e) {
@@ -238,7 +240,7 @@ class _ProfileProgressScreenState extends State<ProfileProgressScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
-                                    Image.asset('assets/images/colmeia.png',
+                                    Image.asset('assets/images/colmeia_padrao.png',
                                         height: 60),
                                   ],
                                 ),

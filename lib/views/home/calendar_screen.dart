@@ -1,3 +1,4 @@
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay;
   List<Map<String, dynamic>> tasks = [];
   bool loadingTasks = true;
+  static const String _baseUrl = AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -34,8 +36,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
       final response = await http.get(
-        Uri.parse(
-            'http://localhost:8080/tasks/user/${UserSession.id}?date=$dateStr'),
+        Uri.parse('$_baseUrl/tasks/user/${UserSession.id}?date=$dateStr'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       if (response.statusCode == 200) {
@@ -67,7 +68,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       final response = await http.patch(
-        Uri.parse('http://localhost:8080/tasks/${task['id']}/complete'),
+        Uri.parse('$_baseUrl/tasks/${task['id']}/complete'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
 
@@ -92,8 +93,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final task = tasks[index];
     try {
       final response = await http.patch(
-        Uri.parse(
-            'http://localhost:8080/tasks/${task['id']}/progress?increment=1'),
+        Uri.parse('$_baseUrl/tasks/${task['id']}/progress?increment=1'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       if (response.statusCode == 200) {
@@ -111,11 +111,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _mostrarRecompensa() async {
-    // 1. Busca a preferência salva pelo usuário nas configurações (Padrão: animado)
     final prefs = await SharedPreferences.getInstance();
-    final String tipoComemoracao = prefs.getString('tipo_comemoracao') ?? 'animado';
-
-    // 2. Define o caminho da imagem de forma dinâmica baseado no valor do SharedPreferences
+    final String tipoComemoracao =
+        prefs.getString('tipo_comemoracao') ?? 'animado';
     final String imagePath = tipoComemoracao == 'estatico'
         ? 'assets/images/comemoracao_estatico.png'
         : 'assets/images/comemoracao_animado.png';
@@ -130,33 +128,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFDE7), // Fundo bege claro/amarelado do design
+            color: const Color(0xFFFFFDE7),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE0DB9A), width: 1),
+            border:
+            Border.all(color: const Color(0xFFE0DB9A), width: 1),
             boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 15, offset: Offset(0, 5))
+              BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 15,
+                  offset: Offset(0, 5))
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Linha Superior com as Imagens Laterais e o Texto Centralizado
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Imagem Esquerda
                   SizedBox(
                     width: 45,
                     height: 45,
-                    child: Image.asset(
-                      imagePath,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.asset(imagePath, fit: BoxFit.contain),
                   ),
-
-                  // Bloco de Texto centralizado
                   const Expanded(
                     child: Column(
                       children: [
@@ -180,49 +176,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ],
                     ),
                   ),
-
-                  // Imagem Direita (Invertida horizontalmente para o efeito de espelho do design)
                   SizedBox(
                     width: 45,
                     height: 45,
                     child: Transform(
                       alignment: Alignment.center,
-                      transform: Matrix4.rotationY(3.14159), // Inverte no eixo Y
-                      child: Image.asset(
-                        imagePath,
-                        fit: BoxFit.contain,
-                      ),
+                      transform: Matrix4.rotationY(3.14159),
+                      child:
+                      Image.asset(imagePath, fit: BoxFit.contain),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Linha Inferior com os Ganhos de Moedas e XP
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.monetization_on, color: Color(0xFFF7941D), size: 22),
+                  Icon(Icons.monetization_on,
+                      color: Color(0xFFF7941D), size: 22),
                   SizedBox(width: 4),
-                  Text(
-                    '+10 moedas',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('+10 moedas',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold)),
                   SizedBox(width: 24),
-                  Icon(Icons.star, color: Color(0xFF26A69A), size: 22), // Cor verde/turquesa da estrela
+                  Icon(Icons.star,
+                      color: Color(0xFF26A69A), size: 22),
                   SizedBox(width: 4),
-                  Text(
-                    '+20 XP',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('+20 XP',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ],
@@ -269,13 +255,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
               const Text(
                 'Uma nova abelha apareceu na sua colmeia!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.black54),
+                style:
+                TextStyle(fontSize: 14, color: Colors.black54),
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.monetization_on, color: Color(0xFFF7941D)),
+                  Icon(Icons.monetization_on,
+                      color: Color(0xFFF7941D)),
                   SizedBox(width: 4),
                   Text('+10 moedas',
                       style: TextStyle(
@@ -302,7 +290,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  // ─── MODAL ESCOLHA ───────────────────────────────────────────────
+  // ── Mapeia opção de repetição para enum do backend ────────────────────────
+  String _mapRepeticao(String repeticao) => switch (repeticao) {
+    'Todos os dias' => 'DAILY',
+    'Todas as semanas' => 'WEEKLY',
+    'Todos os meses' => 'MONTHLY',
+    'Todos os anos' => 'YEARLY',
+    _ => 'DAILY',
+  };
+
+  // ─── MODAL ESCOLHA ────────────────────────────────────────────────────────
   void _abrirModalEscolha() {
     showModalBottomSheet(
       context: context,
@@ -325,8 +322,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             const SizedBox(height: 20),
             const Text('Escolha',
-                style:
-                TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             const Text(
               'Selecione se deseja adicionar uma meta ou uma missão',
@@ -343,7 +340,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       _abrirModalMeta();
                     },
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       side: BorderSide(color: Colors.grey.shade300),
@@ -361,7 +359,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       _abrirModalMissao();
                     },
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       side: BorderSide(color: Colors.grey.shade300),
@@ -380,16 +379,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // ─── MODAL META ──────────────────────────────────────────────────
+  // ─── MODAL META ───────────────────────────────────────────────────────────
   void _abrirModalMeta() {
     final tituloController = TextEditingController();
     final descricaoController = TextEditingController();
     final divideController = TextEditingController();
     bool recorrente = false;
     bool diaInteiro = true;
-    bool naoSeRepete = false;
+    bool seRepete = false;
     bool divide = false;
-    String repeticao = 'Todas as semanas';
+    String repeticao = 'Todos os dias';
     List<bool> diasSemana = [false, true, true, false, true, true, true];
     TimeOfDay horaInicio = TimeOfDay.now();
     TimeOfDay horaFim = TimeOfDay.now();
@@ -433,7 +432,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // NOME
-                        _buildTextField(tituloController, 'Adicionar um nome'),
+                        _buildTextField(
+                            tituloController, 'Adicionar um nome'),
                         const SizedBox(height: 12),
 
                         // RECORRENTE
@@ -443,7 +443,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
+                            border: Border.all(
+                                color: Colors.grey.shade200),
                           ),
                           child: Column(
                             children: [
@@ -457,36 +458,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     value: recorrente,
                                     onChanged: (val) => setModalState(
                                             () => recorrente = val),
-                                    activeColor: const Color(0xFFF7941D),
+                                    activeColor:
+                                    const Color(0xFFF7941D),
                                   ),
                                   if (recorrente)
                                     Expanded(
                                       child: SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal, // ← scroll horizontal se necessário
+                                        scrollDirection:
+                                        Axis.horizontal,
                                         child: Row(
-                                          children: List.generate(7, (i) {
+                                          children:
+                                          List.generate(7, (i) {
                                             return GestureDetector(
-                                              onTap: () => setModalState(
-                                                      () => diasSemana[i] = !diasSemana[i]),
+                                              onTap: () =>
+                                                  setModalState(() =>
+                                                  diasSemana[i] =
+                                                  !diasSemana[
+                                                  i]),
                                               child: Container(
-                                                width: 24, // ← era 28, reduziu
-                                                height: 24, // ← era 28, reduziu
-                                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
+                                                width: 24,
+                                                height: 24,
+                                                margin: const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 2),
+                                                decoration:
+                                                BoxDecoration(
+                                                  shape:
+                                                  BoxShape.circle,
                                                   color: diasSemana[i]
-                                                      ? const Color(0xFFF7941D)
-                                                      : const Color(0xFFFFF9C4),
+                                                      ? const Color(
+                                                      0xFFF7941D)
+                                                      : const Color(
+                                                      0xFFFFF9C4),
                                                 ),
                                                 child: Center(
                                                   child: Text(
                                                     nomeDias[i],
                                                     style: TextStyle(
-                                                      fontSize: 7, // ← era 8, reduziu
-                                                      fontWeight: FontWeight.bold,
-                                                      color: diasSemana[i]
-                                                          ? Colors.white
-                                                          : Colors.black54,
+                                                      fontSize: 7,
+                                                      fontWeight:
+                                                      FontWeight
+                                                          .bold,
+                                                      color: diasSemana[
+                                                      i]
+                                                          ? Colors
+                                                          .white
+                                                          : Colors
+                                                          .black54,
                                                     ),
                                                   ),
                                                 ),
@@ -504,7 +522,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   child: Text(
                                     'Ativando a recorrência ela ficará ativa semanalmente',
                                     style: TextStyle(
-                                        fontSize: 10, color: Colors.black45),
+                                        fontSize: 10,
+                                        color: Colors.black45),
                                   ),
                                 ),
                             ],
@@ -519,7 +538,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
+                            border: Border.all(
+                                color: Colors.grey.shade200),
                           ),
                           child: Row(
                             children: [
@@ -530,8 +550,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   style: TextStyle(fontSize: 14)),
                               Switch(
                                 value: diaInteiro,
-                                onChanged: (val) =>
-                                    setModalState(() => diaInteiro = val),
+                                onChanged: (val) => setModalState(
+                                        () => diaInteiro = val),
                                 activeColor: const Color(0xFFF7941D),
                               ),
                               const Spacer(),
@@ -542,7 +562,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                         context: context,
                                         initialTime: horaInicio);
                                     if (picked != null)
-                                      setModalState(() => horaInicio = picked);
+                                      setModalState(
+                                              () => horaInicio = picked);
                                   },
                                   child: Text(
                                     '${horaInicio.hour.toString().padLeft(2, '0')}:${horaInicio.minute.toString().padLeft(2, '0')}',
@@ -552,11 +573,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                 ),
                                 const Padding(
-                                  padding:
-                                  EdgeInsets.symmetric(horizontal: 4),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 4),
                                   child: Text(' - ',
                                       style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
+                                          fontWeight:
+                                          FontWeight.bold)),
                                 ),
                                 GestureDetector(
                                   onTap: () async {
@@ -564,7 +586,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                         context: context,
                                         initialTime: horaFim);
                                     if (picked != null)
-                                      setModalState(() => horaFim = picked);
+                                      setModalState(
+                                              () => horaFim = picked);
                                   },
                                   child: Text(
                                     '${horaFim.hour.toString().padLeft(2, '0')}:${horaFim.minute.toString().padLeft(2, '0')}',
@@ -582,23 +605,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         // DESCRIÇÃO
                         const Text('Descrição:',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14)),
                         const SizedBox(height: 8),
                         _buildTextField(descricaoController, '...',
                             maxLines: 3),
                         const SizedBox(height: 12),
 
                         // DIVIDE
-                        _buildDivideRow(divide, divideController,
-                                (val) => setModalState(() => divide = val)),
+                        _buildDivideRow(
+                            divide,
+                            divideController,
+                                (val) =>
+                                setModalState(() => divide = val)),
                         const SizedBox(height: 12),
 
-                        // NÃO SE REPETE
+                        // SE REPETE
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
+                            border: Border.all(
+                                color: Colors.grey.shade200),
                           ),
                           child: Column(
                             children: [
@@ -608,51 +636,61 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 child: Row(
                                   children: [
                                     const Icon(Icons.repeat,
-                                        size: 18, color: Colors.black54),
+                                        size: 18,
+                                        color: Colors.black54),
                                     const SizedBox(width: 8),
-                                    const Text('Não se repete',
-                                        style: TextStyle(fontSize: 14)),
+                                    const Text('Se repete',
+                                        style: TextStyle(
+                                            fontSize: 14)),
                                     const Spacer(),
                                     Switch(
-                                      value: naoSeRepete,
-                                      onChanged: (val) => setModalState(
-                                              () => naoSeRepete = val),
-                                      activeColor: const Color(0xFFF7941D),
+                                      value: seRepete,
+                                      onChanged: (val) =>
+                                          setModalState(
+                                                  () => seRepete = val),
+                                      activeColor:
+                                      const Color(0xFFF7941D),
                                     ),
                                   ],
                                 ),
                               ),
-                              if (naoSeRepete)
+                              if (seRepete)
                                 Container(
-                                  margin:
-                                  const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                  margin: const EdgeInsets.fromLTRB(
+                                      12, 0, 12, 12),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFF176),
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius:
+                                    BorderRadius.circular(10),
                                   ),
                                   child: Column(
-                                    children: opcoesRepeticao.map((op) {
+                                    children:
+                                    opcoesRepeticao.map((op) {
                                       final sel = repeticao == op;
                                       return GestureDetector(
                                         onTap: () => setModalState(
                                                 () => repeticao = op),
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 8),
+                                          padding: const EdgeInsets
+                                              .symmetric(vertical: 8),
                                           child: Row(
                                             children: [
                                               Container(
                                                 width: 20,
                                                 height: 20,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
+                                                decoration:
+                                                BoxDecoration(
+                                                  shape:
+                                                  BoxShape.circle,
                                                   border: Border.all(
-                                                      color: Colors.black45,
+                                                      color: Colors
+                                                          .black45,
                                                       width: 2),
                                                   color: sel
                                                       ? Colors.black87
-                                                      : Colors.transparent,
+                                                      : Colors
+                                                      .transparent,
                                                 ),
                                               ),
                                               const SizedBox(width: 12),
@@ -673,8 +711,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                 ),
+
+                // BOTÃO SALVAR
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  padding:
+                  const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   child: ElevatedButton(
                     onPressed: () async {
                       if (tituloController.text.isEmpty) return;
@@ -683,8 +724,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         titulo: tituloController.text,
                         descricao: descricaoController.text,
                         isMission: false,
-                        targetCount: divide && divideController.text.isNotEmpty
+                        targetCount: divide &&
+                            divideController.text.isNotEmpty
                             ? int.tryParse(divideController.text)
+                            : null,
+                        recurrence: seRepete
+                            ? _mapRepeticao(repeticao)
+                            : null,
+                        recurrenceEndDate: seRepete
+                            ? DateTime.now()
+                            .add(const Duration(days: 365))
                             : null,
                       );
                     },
@@ -709,7 +758,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // ─── MODAL MISSÃO ────────────────────────────────────────────────
+  // ─── MODAL MISSÃO ─────────────────────────────────────────────────────────
   void _abrirModalMissao() {
     final tituloController = TextEditingController();
     final descricaoController = TextEditingController();
@@ -749,7 +798,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTextField(tituloController, 'Adicionar um nome'),
+                        _buildTextField(
+                            tituloController, 'Adicionar um nome'),
                         const SizedBox(height: 12),
 
                         // PERÍODO
@@ -759,7 +809,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
+                            border: Border.all(
+                                color: Colors.grey.shade200),
                           ),
                           child: Row(
                             children: [
@@ -778,7 +829,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     lastDate: DateTime(2030),
                                   );
                                   if (picked != null)
-                                    setModalState(() => periodoInicio = picked);
+                                    setModalState(
+                                            () => periodoInicio = picked);
                                 },
                                 child: Text(
                                   '${periodoInicio.day.toString().padLeft(2, '0')}/${periodoInicio.month.toString().padLeft(2, '0')}/${periodoInicio.year}',
@@ -788,8 +840,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 ),
                               ),
                               const Padding(
-                                padding:
-                                EdgeInsets.symmetric(horizontal: 4),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 4),
                                 child: Text(' - ',
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold)),
@@ -803,7 +855,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     lastDate: DateTime(2030),
                                   );
                                   if (picked != null)
-                                    setModalState(() => periodoFim = picked);
+                                    setModalState(
+                                            () => periodoFim = picked);
                                 },
                                 child: Text(
                                   '${periodoFim.day.toString().padLeft(2, '0')}/${periodoFim.month.toString().padLeft(2, '0')}/${periodoFim.year}',
@@ -819,20 +872,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                         const Text('Descrição:',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14)),
                         const SizedBox(height: 8),
                         _buildTextField(descricaoController, '...',
                             maxLines: 3),
                         const SizedBox(height: 12),
 
-                        _buildDivideRow(divide, divideController,
-                                (val) => setModalState(() => divide = val)),
+                        _buildDivideRow(
+                            divide,
+                            divideController,
+                                (val) =>
+                                setModalState(() => divide = val)),
                       ],
                     ),
                   ),
                 ),
+
+                // BOTÃO SALVAR
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  padding:
+                  const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   child: ElevatedButton(
                     onPressed: () async {
                       if (tituloController.text.isEmpty) return;
@@ -841,7 +901,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         titulo: tituloController.text,
                         descricao: descricaoController.text,
                         isMission: true,
-                        targetCount: divide && divideController.text.isNotEmpty
+                        targetCount: divide &&
+                            divideController.text.isNotEmpty
                             ? int.tryParse(divideController.text)
                             : 1,
                         dueDate: periodoInicio,
@@ -876,6 +937,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     int? targetCount,
     DateTime? dueDate,
     DateTime? recurrenceEndDate,
+    String? recurrence,
   }) async {
     final date = dueDate ?? _selectedDay ?? DateTime.now();
     final dateStr =
@@ -889,7 +951,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8080/tasks'),
+        Uri.parse('$_baseUrl/tasks'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',
@@ -901,6 +963,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           'due_date': dateStr,
           'is_mission': isMission,
           'target_count': targetCount ?? 1,
+          if (recurrence != null) 'recurrence': recurrence,
           if (endDateStr != null) 'recurrence_end_date': endDateStr,
         }),
       );
@@ -912,7 +975,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // ─── WIDGETS AUXILIARES ──────────────────────────────────────────
+  // ─── WIDGETS AUXILIARES ───────────────────────────────────────────────────
   Widget _buildTextField(TextEditingController controller, String hint,
       {int maxLines = 1}) {
     return Container(
@@ -923,13 +986,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
-        textAlign: maxLines == 1 ? TextAlign.center : TextAlign.start,
+        textAlign:
+        maxLines == 1 ? TextAlign.center : TextAlign.start,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.black45),
           border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16, vertical: 14),
         ),
       ),
     );
@@ -938,7 +1002,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildDivideRow(bool divide, TextEditingController controller,
       Function(bool) onChanged) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding:
+      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -947,8 +1012,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Row(
         children: [
           const Text('Divide',
-              style:
-              TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 14)),
           Switch(
             value: divide,
             onChanged: onChanged,
@@ -964,7 +1029,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   hintText: 'Quantas vezes?',
                   hintStyle: TextStyle(color: Colors.black38),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                  contentPadding:
+                  EdgeInsets.symmetric(horizontal: 8),
                 ),
               ),
             ),
@@ -1002,10 +1068,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: FloatingActionButton.small(
-                            onPressed: _abrirModalEscolha, // ← atualizado
+                            onPressed: _abrirModalEscolha,
                             backgroundColor: Colors.white,
                             elevation: 4,
-                            child: const Icon(Icons.add, color: Colors.black),
+                            child: const Icon(Icons.add,
+                                color: Colors.black),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -1031,7 +1098,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           separatorBuilder: (_, __) =>
                           const SizedBox(height: 12),
                           itemBuilder: (_, index) =>
-                              _buildTaskTile(index, screenHeight),
+                              _buildTaskTile(
+                                  index, screenHeight),
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -1085,7 +1153,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             formatButtonVisible: false,
             titleCentered: true,
             headerPadding: EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(color: Color(0xFF3D2B1F)),
+            decoration:
+            BoxDecoration(color: Color(0xFF3D2B1F)),
             titleTextStyle: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -1102,7 +1171,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             todayDecoration: BoxDecoration(
                 color: Color(0xFFFFD100), shape: BoxShape.circle),
             todayTextStyle: TextStyle(
-                color: Color(0xFF3D2B1F), fontWeight: FontWeight.bold),
+                color: Color(0xFF3D2B1F),
+                fontWeight: FontWeight.bold),
             defaultTextStyle:
             TextStyle(color: Color(0xFF3D2B1F), fontSize: 13),
             weekendTextStyle:
@@ -1126,7 +1196,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return GestureDetector(
       onTap: () {
-        if (isMission) {
+        if (isMission || temProgresso) {
           _incrementarMissao(index);
         } else {
           _completarTarefa(index);
@@ -1140,7 +1210,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05), blurRadius: 5),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5),
           ],
         ),
         child: Row(
@@ -1162,7 +1233,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
               child: concluida
-                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  ? const Icon(Icons.check,
+                  size: 12, color: Colors.white)
                   : null,
             ),
             const SizedBox(width: 15),

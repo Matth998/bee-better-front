@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:bee_better_flutter/views/menu/custom_bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -19,16 +20,15 @@ class _ShopScreenState extends State<ShopScreen> {
     'Estava me perguntando quando você viria visitar minha loja!',
     'Eu sabia que você gostaria de mudar um pouco!',
     'Acho que tenho exatamente o que você precisa!',
-    'Quando o mel é bom, a abelha sempre volta!'
+    'Quando o mel é bom, a abelha sempre volta!',
   ];
 
   late String fraseAtual;
   List<Map<String, dynamic>> dailyItems = [];
   bool loading = true;
 
-  static const String _baseUrl = 'http://localhost:8080';
+  static const String _baseUrl = AppConfig.baseUrl;
 
-  // Assets que são "padrão" e não precisam aparecer na loja
   static const List<String> _assetspadrao = [
     'coroa_padrao',
     'abelha_corpo_padrao',
@@ -76,7 +76,6 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Future<void> _comprarItem(Map<String, dynamic> item) async {
-    // 1. VERIFICAÇÃO DE MOEDAS: Valida ANTES de abrir o diálogo de confirmação
     if (UserSession.moedas < (item['price'] as int)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +90,8 @@ class _ShopScreenState extends State<ShopScreen> {
                 Expanded(
                   child: Text(
                     'Moedas insuficientes para comprar ${item['name']}!',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w500),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -101,14 +101,14 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         );
       }
-      return; // Bloqueia a abertura do modal
+      return;
     }
 
-    // 2. Se ele tiver moedas, o fluxo segue normalmente para o diálogo
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(item['name'],
             style: const TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
@@ -143,8 +143,8 @@ class _ShopScreenState extends State<ShopScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child:
-            const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -153,8 +153,8 @@ class _ShopScreenState extends State<ShopScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child:
-            const Text('Comprar', style: TextStyle(color: Colors.white)),
+            child: const Text('Comprar',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -205,54 +205,81 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final lojaWidth = size.width;
-    final lojaAlturaReal = lojaWidth * (750 / 600);
-    final lojaHeight =
-    lojaAlturaReal > size.height ? lojaAlturaReal : size.height;
+    final w = size.width;
+    final h = size.height;
 
-    final boxAreaTop = lojaHeight * 0.535;
-    final boxAreaHeight = lojaHeight - boxAreaTop;
+    // Tenda: 604x461 → proporção height/width = 0.763
+    final tendaH = w * 1.35;
+
+    // Caixa: 144x155 → proporção height/width = 1.076
+    // 4 caixas por linha com gap entre elas
+    const int cols = 4;
+    const double gapH = 3.0; // gap horizontal entre caixas
+    const double gapV = 6.0; // gap vertical entre linhas
+    const double paddingH = 4.0; // padding lateral da grade
+    final caixaW = (w - paddingH * 2 - gapH * (cols - 1)) / cols;
+    final caixaH = caixaW * (155 / 144); // mantém proporção original
+
+    // Grade começa logo abaixo da tenda
+    final gradeTop = tendaH;
+    // Altura total da grade: 2 linhas + gap + padding
+    final gradeH = caixaH * 2 + gapV + 16;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDF1B8),
       body: SafeArea(
         child: Stack(
           children: [
-            // LOJA
+            // ── FUNDO AMARELO (ocupa tudo atrás) ─────────────────────────
             Positioned.fill(
+              child: Container(color: const Color(0xFFFDF1B8)),
+            ),
+
+            // ── TENDA (topo, largura total) ───────────────────────────────
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
               child: Image.asset(
-                'assets/images/loja.png',
-                width: lojaWidth,
-                height: lojaHeight,
-                fit: BoxFit.cover,
+                'assets/images/tenda.png',
+                width: w,
+                height: tendaH,
+                fit: BoxFit.fill,
               ),
             ),
 
-            // APICULTOR
             Positioned(
-              bottom: lojaHeight * 0.365,
-              right: lojaWidth * 0.04,
+              top: tendaH,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(color: const Color(0xFFFDF1B8)),
+            ),
+
+            // ── APICULTOR (entre tenda e caixas) ─────────────────────────
+            Positioned(
+              top: tendaH * 0.456,
+              right: w * 0.04,
               child: Image.asset(
                 'assets/images/apicultor.png',
-                height: lojaHeight * 0.32,
+                height: tendaH * 0.60,
               ),
             ),
 
-            // BALÃO DE FALA
+            // ── BALÃO DE FALA ─────────────────────────────────────────────
             Positioned(
-              bottom: lojaHeight * 0.57,
-              left: lojaWidth * 0.04,
-              width: lojaWidth * 0.50,
+              top: tendaH * 0.52,
+              left: w * 0.04,
+              width: w * 0.50,
               child: CustomPaint(
                 painter: _SpeechBubblePainter(),
                 child: Padding(
-                  padding:
-                  EdgeInsets.fromLTRB(14, 10, 14, lojaWidth * 0.12),
+                  padding: EdgeInsets.fromLTRB(14, 10, 14, w * 0.10),
                   child: Text(
                     fraseAtual,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: lojaWidth * 0.030,
+                      fontSize: w * 0.030,
                       fontWeight: FontWeight.w500,
                       color: Colors.black87,
                       height: 1.4,
@@ -262,72 +289,60 @@ class _ShopScreenState extends State<ShopScreen> {
               ),
             ),
 
-            // ── ITENS DIÁRIOS ──
+            // ── GRADE DE CAIXAS ───────────────────────────────────────────
             Positioned(
-              top: boxAreaTop,
+              top: gradeTop,
               left: 0,
               right: 0,
-              height: boxAreaHeight,
+              height: gradeH,
               child: loading
                   ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFFF7941D)),
+                child: CircularProgressIndicator(
+                    color: Color(0xFFF7941D)),
               )
-                  : dailyItems.isEmpty
-                  ? const Center(
-                child: Text(
-                  'Todos os itens já são seus!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              )
-                  : Container(
-                alignment: Alignment.topCenter,
-                height: boxAreaHeight,
-                // Permite a rolagem horizontal da vitrine completa se faltar espaço
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: lojaWidth * 0.045,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // FILEIRA DE CIMA (Itens nos índices 0, 1, 2, 3)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          for (int i = 0; i < dailyItems.length && i < 4; i++)
-                            _buildItemCard(dailyItems[i], boxAreaHeight, lojaWidth),
-                        ],
-                      ),
+                  : Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: paddingH),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── LINHA 1 ───────────────────────────────────
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                      children: List.generate(cols, (i) {
+                        final item = i < dailyItems.length
+                            ? dailyItems[i]
+                            : null;
+                        return _buildCaixa(
+                            item, caixaW, caixaH);
+                      }),
+                    ),
 
-                      // Espaçamento vertical exato entre a prateleira de cima e de baixo
-                      SizedBox(height: boxAreaHeight * 0.045),
+                    const SizedBox(height: gapV),
 
-                      // FILEIRA DE BAIXO (Itens nos índices 4, 5, 6, 7)
-                      if (dailyItems.length > 4)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            for (int i = 4; i < dailyItems.length && i < 8; i++)
-                              _buildItemCard(dailyItems[i], boxAreaHeight, lojaWidth),
-                          ],
-                        ),
-                    ],
-                  ),
+                    // ── LINHA 2 ───────────────────────────────────
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                      children: List.generate(cols, (i) {
+                        final idx = i + cols;
+                        final item = idx < dailyItems.length
+                            ? dailyItems[idx]
+                            : null;
+                        return _buildCaixa(
+                            item, caixaW, caixaH);
+                      }),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            // MOEDAS
+            // ── MOEDAS ────────────────────────────────────────────────────
             Positioned(
-              top: 16,
-              right: 16,
+              top: 12,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 6),
@@ -341,10 +356,9 @@ class _ShopScreenState extends State<ShopScreen> {
                     Text(
                       '${UserSession.moedas}',
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14),
                     ),
                     const SizedBox(width: 6),
                     const Icon(Icons.circle,
@@ -354,10 +368,10 @@ class _ShopScreenState extends State<ShopScreen> {
               ),
             ),
 
-            // BOTÃO VOLTAR
+            // ── BOTÃO VOLTAR ──────────────────────────────────────────────
             Positioned(
-              top: 16,
-              left: 16,
+              top: 12,
+              left: 12,
               child: GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
@@ -385,87 +399,94 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildItemCard(Map<String, dynamic> item, double boxAreaHeight, double lojaWidth) {
-    // Retornando aos tamanhos fixos e proporcionais que mantêm as imagens pequenas e organizadas
-    final cardWidth = lojaWidth * 0.205;
-    final cardHeight = boxAreaHeight * 0.295;
-
+  Widget _buildCaixa(
+      Map<String, dynamic>? item, double caixaW, double caixaH) {
     return GestureDetector(
-      onTap: () => _comprarItem(item),
-      child: Container(
-        width: cardWidth,
-        height: cardHeight,
-        // Margem lateral controlada para bater com as colunas do fundo
-        margin: EdgeInsets.symmetric(horizontal: lojaWidth * 0.012),
-        decoration: BoxDecoration(
-          color: const Color(0xFF6B3F1A).withOpacity(0.4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFFFD100).withOpacity(0.5),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      onTap: item != null ? () => _comprarItem(item) : null,
+      child: SizedBox(
+        width: caixaW,
+        height: caixaH,
+        child: Stack(
           children: [
-            // Imagem do item
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Image.asset(
-                  'assets/images/shop/${item['assetName']}.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.image_not_supported,
-                    color: Colors.white38,
-                    size: 24,
-                  ),
-                ),
+            // Imagem da caixa como fundo
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/caixa.png',
+                fit: BoxFit.fill,
               ),
             ),
 
-            // Nome do item
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text(
-                item['name'],
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 2),
-
-            // Preço
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4, left: 2, right: 2),
-              child: Row(
+            // Conteúdo do item por cima
+            if (item != null)
+              Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.circle, color: Color(0xFFFFD100), size: 7),
-                  const SizedBox(width: 2),
-                  Flexible(
-                    child: Text(
-                      '${item['price']}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFFFD100),
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+                  // Imagem do item (ocupa ~60% da caixa)
+                  Expanded(
+                    flex: 6,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          caixaW * 0.08,
+                          caixaH * 0.06,
+                          caixaW * 0.08,
+                          0),
+                      child: Image.asset(
+                        'assets/images/shop/${item['assetName']}.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.image_not_supported,
+                          color: Colors.white38,
+                          size: 20,
+                        ),
                       ),
+                    ),
+                  ),
+
+                  // Nome
+                  Padding(
+                    padding:
+                    EdgeInsets.symmetric(horizontal: caixaW * 0.05),
+                    child: Text(
+                      item['name'],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: const Color(0xFFFDF1B8),
+                        fontSize: caixaW * 0.11,
+                        fontWeight: FontWeight.bold,
+                        shadows: const [
+                          Shadow(color: Colors.black54, blurRadius: 2)
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Preço
+                  Padding(
+                    padding: EdgeInsets.only(bottom: caixaH * 0.05),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.circle,
+                            color: Color(0xFFFFD100), size: 8),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${item['price']}',
+                          style: TextStyle(
+                            color: const Color(0xFFFFD100),
+                            fontSize: caixaW * 0.11,
+                            fontWeight: FontWeight.bold,
+                            shadows: const [
+                              Shadow(color: Colors.black54, blurRadius: 2)
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
           ],
         ),
       ),

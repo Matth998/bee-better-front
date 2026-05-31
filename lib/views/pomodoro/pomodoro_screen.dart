@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:bee_better_flutter/constants.dart';
+import 'package:bee_better_flutter/views/pomodoro/pomodoro_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:bee_better_flutter/services/user_session.dart';
@@ -49,6 +52,9 @@ class _PomodoroScreenState extends State<PomodoroScreen>
   int _totalSeconds = 0;
   int _currentRound = 0;
 
+  // Toque selecionado nas configurações
+  String _ringtone = 'toque_4';
+
   // Sessão no back
   int? _sessionId;
 
@@ -57,6 +63,9 @@ class _PomodoroScreenState extends State<PomodoroScreen>
 
   // Timer interno
   Timer? _timer;
+
+  // Conexão back
+  static const String _baseUrl = AppConfig.baseUrl;
 
   // ───── lifecycle ─────
 
@@ -68,6 +77,7 @@ class _PomodoroScreenState extends State<PomodoroScreen>
       duration: const Duration(seconds: 1),
     );
     _resetTimer();
+    _loadConfig();
   }
 
   @override
@@ -75,6 +85,28 @@ class _PomodoroScreenState extends State<PomodoroScreen>
     _timer?.cancel();
     _progressController.dispose();
     super.dispose();
+  }
+
+  // ───── carregar configurações ─────
+
+  Future<void> _loadConfig() async {
+    final data = await PomodoroPrefs.load();
+    final ringtoneLabel = data['ringtone'] as String;
+    final ringtoneFile = 'toque_${ringtoneLabel.replaceAll('Toque ', '').trim()}';
+
+    setState(() {
+      _ringtone = ringtoneFile;
+      config = PomodoroConfig(
+        focusMinutes: data['focus'] as int,
+        shortBreakMinutes: data['shortBreak'] as int,
+        longBreakMinutes: data['longBreak'] as int,
+      );
+      // ← _resetTimer() inline aqui, dentro do setState
+      _running = false;
+      _totalSeconds = _durationForMode(_mode);
+      _secondsLeft = _totalSeconds;
+    });
+    _timer?.cancel();
   }
 
   // ───── helpers ─────
@@ -120,7 +152,7 @@ class _PomodoroScreenState extends State<PomodoroScreen>
   Future<void> _startSession() async {
     try {
       final res = await http.post(
-        Uri.parse('http://localhost:8080/pomodoro/start'),
+        Uri.parse('$_baseUrl/pomodoro/start'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}',
@@ -143,7 +175,7 @@ class _PomodoroScreenState extends State<PomodoroScreen>
     if (_sessionId == null) return;
     try {
       await http.patch(
-        Uri.parse('http://localhost:8080/pomodoro/$_sessionId/finish'),
+        Uri.parse('$_baseUrl/pomodoro/$_sessionId/finish'),
         headers: {'Authorization': 'Bearer ${UserSession.token}'},
       );
       _sessionId = null;
@@ -163,7 +195,6 @@ class _PomodoroScreenState extends State<PomodoroScreen>
   void _play() {
     if (_secondsLeft == 0) return;
 
-    // Inicia sessão no back só no primeiro play do modo foco
     if (_mode == PomodoroMode.pomodoro || _mode == PomodoroMode.loop) {
       _startSession();
     }
@@ -188,16 +219,21 @@ class _PomodoroScreenState extends State<PomodoroScreen>
     _timer?.cancel();
     setState(() => _running = false);
 
+    // ── Toca o som ao finalizar ──────────────────────────────────────────
+    final player = AudioPlayer();
+    player.play(AssetSource('audio/$_ringtone.mp3')).catchError((e) {
+      debugPrint('Erro ao tocar toque pomodoro: $e');
+    });
+    // Libera o player após 10 segundos
+    Future.delayed(const Duration(seconds: 10), () => player.dispose());
+
     if (_mode == PomodoroMode.pomodoro || _mode == PomodoroMode.loop) {
       _finishSession();
-      setState(() {
-        _currentRound++;
-      });
+      setState(() => _currentRound++);
     }
 
-    // Auto-avança para próximo modo
+    // Auto-avança para próximo modo no loop
     if (_mode == PomodoroMode.loop) {
-      // Loop: alterna foco / descanso curto indefinidamente
       Future.delayed(const Duration(milliseconds: 500), () {
         _setMode(PomodoroMode.loop);
         _play();
@@ -225,14 +261,12 @@ class _PomodoroScreenState extends State<PomodoroScreen>
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // FUNDO COLMEIA
           Positioned.fill(
             child: Image.asset(
               'assets/images/fundo_colmeia.png',
               fit: BoxFit.cover,
             ),
           ),
-
           SafeArea(
             child: Column(
               children: [
@@ -269,7 +303,8 @@ class _PomodoroScreenState extends State<PomodoroScreen>
                 color: const Color(0xFFF7941D),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+              child: const Icon(Icons.chevron_left,
+                  color: Colors.white, size: 28),
             ),
           ),
           const Expanded(
@@ -317,21 +352,16 @@ class _PomodoroScreenState extends State<PomodoroScreen>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Arco de progresso
           CustomPaint(
             size: Size(diameter, diameter),
             painter: _ArcPainter(progress: _progress),
           ),
-
-          // Abelha centralizada
           Image.asset(
             'assets/images/abelha_login.png',
             width: diameter * 0.5,
             height: diameter * 0.5,
             errorBuilder: (_, __, ___) => _BeeIcon(size: diameter * 0.5),
           ),
-
-          // Tempo abaixo da abelha
           Positioned(
             bottom: diameter * 0.12,
             child: Text(
@@ -354,7 +384,6 @@ class _PomodoroScreenState extends State<PomodoroScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Play / Pause
         GestureDetector(
           onTap: _togglePlay,
           child: Container(
@@ -373,7 +402,6 @@ class _PomodoroScreenState extends State<PomodoroScreen>
           ),
         ),
         const SizedBox(width: 32),
-        // Restart
         GestureDetector(
           onTap: _restart,
           child: Container(
@@ -384,11 +412,7 @@ class _PomodoroScreenState extends State<PomodoroScreen>
               shape: BoxShape.circle,
               border: Border.all(color: Colors.black26, width: 1.5),
             ),
-            child: const Icon(
-              Icons.refresh,
-              color: Colors.black87,
-              size: 28,
-            ),
+            child: const Icon(Icons.refresh, color: Colors.black87, size: 28),
           ),
         ),
       ],
@@ -429,7 +453,8 @@ class _PomodoroScreenState extends State<PomodoroScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF7941D) : const Color(0xFFFAE89A),
+            color:
+            selected ? const Color(0xFFF7941D) : const Color(0xFFFAE89A),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
@@ -449,9 +474,7 @@ class _PomodoroScreenState extends State<PomodoroScreen>
 
   void _openSettings() {
     Navigator.pushNamed(context, '/pomodoroSettings').then((_) {
-      // Ao voltar das configurações, pode recarregar o config
-      // se usar SharedPreferences, aqui seria o lugar de ler
-      _resetTimer();
+      _loadConfig(); // ← recarrega config e toque ao voltar das configurações
     });
   }
 }
@@ -469,7 +492,6 @@ class _ArcPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2) - 8;
 
-    // Trilha cinza
     final trackPaint = Paint()
       ..color = Colors.black12
       ..style = PaintingStyle.stroke
@@ -478,7 +500,6 @@ class _ArcPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Arco de progresso laranja
     if (progress > 0) {
       final progressPaint = Paint()
         ..color = const Color(0xFFF7941D)
@@ -486,7 +507,6 @@ class _ArcPainter extends CustomPainter {
         ..strokeWidth = 6
         ..strokeCap = StrokeCap.round;
 
-      // Ponto móvel (bolinha preta no início)
       final dotAngle = -pi / 2 + (2 * pi * progress);
       final dotX = center.dx + radius * cos(dotAngle);
       final dotY = center.dy + radius * sin(dotAngle);
@@ -502,7 +522,6 @@ class _ArcPainter extends CustomPainter {
       final dotPaint = Paint()..color = Colors.black;
       canvas.drawCircle(Offset(dotX, dotY), 7, dotPaint);
     } else {
-      // Bolinha no início (sem progresso)
       final dotPaint = Paint()..color = Colors.black;
       canvas.drawCircle(Offset(center.dx, center.dy - radius), 7, dotPaint);
     }
@@ -513,7 +532,7 @@ class _ArcPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────
-// ABELHA FALLBACK (caso não tenha o asset)
+// ABELHA FALLBACK
 // ─────────────────────────────────────────
 class _BeeIcon extends StatelessWidget {
   final double size;
@@ -535,36 +554,40 @@ class _BeePainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.width * 0.32;
 
-    // Corpo
     final bodyPaint = Paint()..color = const Color(0xFFF7941D);
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy), width: r * 1.2, height: r * 1.6),
+      Rect.fromCenter(
+          center: Offset(cx, cy), width: r * 1.2, height: r * 1.6),
       bodyPaint,
     );
 
-    // Listras pretas
     final stripePaint = Paint()..color = Colors.black;
     for (int i = 0; i < 3; i++) {
       canvas.drawRect(
-        Rect.fromLTWH(cx - r * 0.6, cy - r * 0.3 + i * r * 0.35, r * 1.2, r * 0.15),
+        Rect.fromLTWH(
+            cx - r * 0.6, cy - r * 0.3 + i * r * 0.35, r * 1.2, r * 0.15),
         stripePaint,
       );
     }
 
-    // Cabeça
     final headPaint = Paint()..color = Colors.black;
     canvas.drawCircle(Offset(cx, cy - r * 0.9), r * 0.3, headPaint);
 
-    // Asas
     final wingPaint = Paint()
       ..color = Colors.white.withOpacity(0.7)
       ..style = PaintingStyle.fill;
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx - r * 0.7, cy - r * 0.2), width: r * 0.8, height: r * 0.5),
+      Rect.fromCenter(
+          center: Offset(cx - r * 0.7, cy - r * 0.2),
+          width: r * 0.8,
+          height: r * 0.5),
       wingPaint,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx + r * 0.7, cy - r * 0.2), width: r * 0.8, height: r * 0.5),
+      Rect.fromCenter(
+          center: Offset(cx + r * 0.7, cy - r * 0.2),
+          width: r * 0.8,
+          height: r * 0.5),
       wingPaint,
     );
   }

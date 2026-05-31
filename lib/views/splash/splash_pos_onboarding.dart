@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bee_better_flutter/constants.dart';
 import 'package:bee_better_flutter/services/user_session.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,6 +15,7 @@ class SplashPosOnboarding extends StatefulWidget {
 
 class _SplashPosOnboardingState extends State<SplashPosOnboarding>
     with SingleTickerProviderStateMixin {
+  static const String _baseUrl = AppConfig.baseUrl;
 
   late AnimationController _controller;
   Future? _onboardingFuture;
@@ -63,7 +65,7 @@ class _SplashPosOnboardingState extends State<SplashPosOnboarding>
 
   Future<void> _refreshUserSession() async {
     final response = await http.get(
-      Uri.parse('http://localhost:8080/users/${UserSession.id}'),
+      Uri.parse('$_baseUrl/users/${UserSession.id}'),
       headers: {
         'Authorization': 'Bearer ${UserSession.token}',
       },

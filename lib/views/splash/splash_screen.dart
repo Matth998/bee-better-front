@@ -1,16 +1,16 @@
-import 'package:bee_better_flutter/views/auth/login.dart';
+import 'package:bee_better_flutter/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 class SplashScreen extends StatefulWidget {
-
   const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -18,21 +18,39 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
 
-    // 1. Configura a animação de pulso
+    // Animação de pulso
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000), // 1 segundo por ciclo (vai e volta)
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
-    )..repeat(reverse: true); // Faz o efeito de "vai e vem"
+    )..repeat(reverse: true);
 
     _animation = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // 2. Timer para navegar após 3 segundos --
-    Timer(const Duration(seconds: 3), () {
-      // Navegar para a nossa tela principal (Login)
-      Navigator.pushReplacementNamed(context, '/login');
-    });
+    // Após 2 segundos verifica se já tem sessão salva
+    Timer(const Duration(seconds: 2), () => _verificarSessao());
+  }
+
+  Future<void> _verificarSessao() async {
+    if (!mounted) return;
+
+    try {
+      final temSessao = await AuthService.restaurarSessao();
+
+      if (!mounted) return;
+
+      if (temSessao) {
+        // Já está logado — vai direto para home
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Não tem sessão — vai para login
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      // Em caso de erro, vai para login
+      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -44,12 +62,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF1B8), // Cor de fundo amarela clara
+      backgroundColor: const Color(0xFFFDF1B8),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Efeito de pulso na imagem
             ScaleTransition(
               scale: _animation,
               child: Image.asset(
@@ -64,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Roboto', // Verificar fonte correta com a Julia
+                fontFamily: 'Roboto',
                 letterSpacing: 2.0,
                 color: Colors.black,
               ),
@@ -75,4 +92,3 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 }
-

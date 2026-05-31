@@ -20,6 +20,7 @@ dependencies:
   audioplayers: ^6.6.0
   google_sign_in: ^6.2.1
   app_links: ^6.3.2
+  alarm: ^4.0.3
 
 dev_dependencies:
   flutter_test:
